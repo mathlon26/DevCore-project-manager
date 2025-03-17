@@ -151,8 +151,6 @@ inline bool load(const std::string &filename, bool install=false) {
         fs::remove_all("/tmp/devcore_repo");
         Canvas::PrintSuccess(Canvas::BoldText("Done installing the default config.") + Canvas::ColorToAnsi(Canvas::Color::GREEN) + "\n    You can edit the config by running `devcore config set <key> <value>`. \n    Or editing the config file manually at '" + Canvas::LinkText(filename, Canvas::Color::GREEN) + "'");
     }
-    
-
 
     std::ifstream file(filename);
     if (!file.is_open()) {

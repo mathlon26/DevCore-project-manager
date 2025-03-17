@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <sstream>
 #include <vector>
+#include <regex>
+#include <cstdio>
 
 namespace Canvas
 {
@@ -25,7 +27,7 @@ namespace Canvas
             case Color::CYAN:        return "\033[36m";
             case Color::LIGHT_GREEN: return "\033[92m"; // Bright green.
             case Color::PINK:        return "\033[95m"; // Bright magenta.
-            case Color::DEFAULT:     
+            case Color::DEFAULT:
             default:                 return "\033[0m";
         }
     }
@@ -45,11 +47,35 @@ namespace Canvas
         return "\033[4m" + text + "\033[0m" + ColorToAnsi(continueColor);
     }
 
-
     // Reset the console color.
     inline std::string ResetColor()
     {
         return "\033[0m";
+    }
+
+    // Helper function to calculate the visual length of a string,
+    // ignoring ANSI escape sequences.
+    inline size_t DisplayLength(const std::string &text)
+    {
+        size_t length = 0;
+        bool in_escape = false;
+        for (size_t i = 0; i < text.size(); ++i)
+        {
+            if (!in_escape)
+            {
+                if (text[i] == '\033')
+                    in_escape = true;
+                else
+                    ++length;
+            }
+            else
+            {
+                // Typically ANSI codes end with 'm'
+                if (text[i] == 'm')
+                    in_escape = false;
+            }
+        }
+        return length;
     }
 
     // Print text in a given color.
@@ -70,7 +96,7 @@ namespace Canvas
     inline void PrintLine(std::string ch = "─", int length = 50, Color color = Color::DEFAULT)
     {
         std::string line{};
-        for (size_t i = 0; i < length; i++)
+        for (int i = 0; i < length; i++)
             line += ch;
         
         PrintColoredLine(line, color, false);
@@ -80,15 +106,17 @@ namespace Canvas
     inline void PrintTitle(const std::string &title, Color color = Color::CYAN)
     {
         int padding = 4;
-        int titleLength = title.size();
+        int titleLength = DisplayLength(title);
         int totalWidth = titleLength + padding * 2;
         // Title line.
-        std::cout << "\033[1m" << ColorToAnsi(color) << '*' << std::string(totalWidth, '=') << ' ' << title << ' ' << std::string(totalWidth, '=') << '*';
-        std::cout << ResetColor() << '\n' << std::endl;
+        std::cout << "\033[1m" << ColorToAnsi(color)
+                  << '*' << std::string(totalWidth, '=') << ' ' 
+                  << title << ' ' << std::string(totalWidth, '=')
+                  << '*' << ResetColor() << "\n" << std::endl;
     }
 
     // Print a box around a given (possibly multi-line) text.
-    inline void PrintBox(const std::string &text, const std::string &title = "", Color color = Color::GREEN)
+    inline void PrintBox(const std::string &text, const std::string &title = "", Color color = Color::GREEN, int fixOffset = 0)
     {
         std::istringstream iss(text);
         std::string line;
@@ -97,24 +125,25 @@ namespace Canvas
         while (std::getline(iss, line))
         {
             lines.push_back(line);
-            if (line.size() > maxLength)
-                maxLength = line.size();
+            int dlen = DisplayLength(line);
+            if (dlen > maxLength)
+                maxLength = dlen;
         }
         // Top border.
         std::cout << ColorToAnsi(color) << "┌─" << title;
-        PrintLine("─", maxLength + 1 - title.size(), color);
+        PrintLine("─", maxLength + 1 - static_cast<int>(DisplayLength(title)) + fixOffset, color);
         std::cout << ColorToAnsi(color) << "┐" << ResetColor() << std::endl;
         // Content lines with side borders.
         for (const auto &l : lines)
         {
             std::cout << ColorToAnsi(color) << "│ " << ResetColor();
-            std::cout << l << std::string(maxLength - l.size(), ' ') 
+            std::cout << l << std::string(maxLength - DisplayLength(l), ' ') 
                       << ColorToAnsi(color) << " │" << ResetColor() << std::endl;
         }
         // Bottom border.
         std::cout << ColorToAnsi(color) << "└";
         PrintLine("─", maxLength + 2, color);
-       std::cout << ColorToAnsi(color) << "┘" << ResetColor() << std::endl;
+        std::cout << ColorToAnsi(color) << "┘" << ResetColor() << std::endl;
     }
 
     // Print a success message with a check mark.
@@ -162,7 +191,7 @@ namespace Canvas
 
     inline bool GetBoolInput(const std::string &prompt, const std::string &title = "", Color color = Color::YELLOW, Color titleColor = Color::CYAN)
     {
-        if (title != "")
+        if (!title.empty())
             PrintTitle(title, titleColor);
         
         PrintColored(prompt + "[Y/n]", color);
@@ -182,14 +211,183 @@ namespace Canvas
         }
         else
         {
-            int pad = (width - message.size() - 2) / 2;
+            int pad = (width - static_cast<int>(DisplayLength(message)) - 2) / 2;
             std::cout << ColorToAnsi(color) << std::string(pad, ' ') 
                       << " " << message << " " 
                       << std::string(pad, ' ') << ResetColor() << std::endl;
         }
     }
 
-    // Additional print functions and styling helpers can be added here as needed.
+    // Print a command error message showing the invalid command
+    // and instructing the user to use the help option.
+    inline void PrintCommandError(int argc, char const *argv[])
+    {
+        // Build the command string from the arguments.
+        std::ostringstream commandStream;
+        commandStream << "Invalid arguments for command: `";
+        for (int i = 0; i < argc; ++i)
+        {
+            commandStream << argv[i];
+            if (i < argc - 1)
+                commandStream << " ";
+        }
+        commandStream << "`";
+        std::string commandStr = commandStream.str();
+        
+        // Print the error message.
+        PrintError(commandStr);
+
+        // Execute the help command and capture its output.
+        std::string helpCommand = std::string(argv[0]) + " --help";
+        FILE *pipe = popen(helpCommand.c_str(), "r");
+        if (!pipe)
+        {
+            PrintError("Failed to run help command.");
+            exit(1);
+        }
+        char buffer[128];
+        std::string helpOutput;
+        while (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+        {
+            helpOutput += buffer;
+        }
+        pclose(pipe);
+
+        // Use regex to select all commands related to argv[1].
+        // Here, we assume that any line containing argv[1] (case-insensitive)
+        // corresponds to a relevant command from the help output.
+        std::string command = argv[0];
+        std::string searchTerm = argv[1];
+        std::regex pattern(R"((devcore\s+config\s+\S+.*)│)", std::regex_constants::icase);
+
+        std::istringstream iss(helpOutput);
+        std::string line;
+        std::ostringstream relevantCommands;
+
+        while (std::getline(iss, line))
+        {
+            std::smatch match;
+            if (std::regex_search(line, match, pattern))
+            {
+                relevantCommands << ColorToAnsi(Color::YELLOW) << match[1] << "\n";
+            }
+        }
+
+
+        std::string commandsStr = relevantCommands.str();
+        if (commandsStr.empty())
+        {
+            commandsStr = "No commands related to `" + searchTerm + "` found.";
+        }
+        PrintBox(commandsStr, " Did you mean... ", Color::CYAN);
+
+        // Print usage information with the program name (argv[0]) for help.
+        PrintInfo("Use: `" + std::string(argv[0]) + " --help` to view all available commands.");
+
+        exit(0);
+    }
+
+
+    // Print a table with headers and rows.
+    // Each column's width is determined by the widest element (header or cell) in that column.
+    inline void PrintTable(const std::vector<std::string>& header, const std::vector<std::vector<std::string>>& rows, Color color = Color::DEFAULT)
+    {
+        size_t cols = header.size();
+        std::vector<size_t> colWidths(cols, 0);
+
+        // Determine max width for each column from the header.
+        for (size_t i = 0; i < cols; i++)
+        {
+            colWidths[i] = DisplayLength(header[i]);
+        }
+
+        // Update max width from the rows.
+        for (const auto &row : rows)
+        {
+            for (size_t i = 0; i < row.size() && i < cols; i++)
+            {
+                size_t cellLength = DisplayLength(row[i]);
+                if (cellLength > colWidths[i])
+                    colWidths[i] = cellLength;
+            }
+        }
+
+        // Helper lambda to repeat a string.
+        auto repeat = [](const std::string &s, size_t count) {
+            std::string result;
+            for (size_t i = 0; i < count; ++i)
+                result += s;
+            return result;
+        };
+
+        std::ostringstream oss;
+
+        // Top border.
+        oss << ColorToAnsi(color) << "┌";
+        for (size_t i = 0; i < cols; i++)
+        {
+            oss << repeat("─", colWidths[i] + 2);
+            oss << (i < cols - 1 ? "┬" : "┐");
+        }
+        oss << ResetColor() << std::endl;
+        std::cout << oss.str();
+
+        // Header row.
+        oss.str("");
+        oss.clear();
+        oss << ColorToAnsi(color) << "│" << ResetColor();
+        for (size_t i = 0; i < cols; i++)
+        {
+            oss << " " << header[i];
+            size_t pad = colWidths[i] > DisplayLength(header[i]) ? colWidths[i] - DisplayLength(header[i]) : 0;
+            oss << std::string(pad, ' ') << " " << ColorToAnsi(color) << "│" << ResetColor();
+        }
+        oss << std::endl;
+        std::cout << oss.str();
+
+        // Header separator.
+        oss.str("");
+        oss.clear();
+        oss << ColorToAnsi(color) << "├";
+        for (size_t i = 0; i < cols; i++)
+        {
+            oss << repeat("─", colWidths[i] + 2);
+            oss << (i < cols - 1 ? "┼" : "┤");
+        }
+        oss << ResetColor() << std::endl;
+        std::cout << oss.str();
+
+        // Data rows.
+        for (const auto &row : rows)
+        {
+            oss.str("");
+            oss.clear();
+            oss << ColorToAnsi(color) << "│" << ResetColor();
+            for (size_t i = 0; i < cols; i++)
+            {
+                // Use an empty string if this row doesn't have enough columns.
+                std::string cell = (i < row.size()) ? row[i] : "";
+                oss << " " << cell;
+                size_t pad = colWidths[i] > DisplayLength(cell) ? colWidths[i] - DisplayLength(cell) : 0;
+                oss << std::string(pad, ' ') << " " << ColorToAnsi(color) << "│" << ResetColor();
+            }
+            oss << std::endl;
+            std::cout << oss.str();
+        }
+
+        // Bottom border.
+        oss.str("");
+        oss.clear();
+        oss << ColorToAnsi(color) << "└";
+        for (size_t i = 0; i < cols; i++)
+        {
+            oss << repeat("─", colWidths[i] + 2);
+            oss << (i < cols - 1 ? "┴" : "┘");
+        }
+        oss << ResetColor() << std::endl;
+        std::cout << oss.str();
+    }
+
 };
 
 #endif // CANVAS__H
