@@ -1,1 +1,1 @@
-g++ source/*.cpp -o pm
+g++ source/*.cpp -o devcore

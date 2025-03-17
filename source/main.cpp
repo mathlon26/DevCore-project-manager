@@ -1,36 +1,49 @@
-#include "../include/ProjectManager.h"
-#include "../include/ListCommand.h"
-#include "../include/GetIndexCommand.h"
-#include "../dependencies/CommandManager.hpp"
+#include "../dependencies/Canvas.hpp"
+#include "../dependencies/Config.hpp"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
-const std::string mainCommand = "pm";
+const std::string CONFIG_PATH = "/.config/devcore/devcore.conf";
+const std::string HOME_PATH = getenv("HOME");
 
-void ParseCommand(int argc, char const *argv[], std::string& command, std::vector<std::string>& arguments)
-{
-    if (argc > 1) {
-        command = argv[1]; // First argument as command
-        for (int i = 2; i < argc; ++i) {
-            arguments.emplace_back(argv[i]); // Add remaining arguments
+
+int main(int argc, char const *argv[]) {
+    if (!Config::load(HOME_PATH + CONFIG_PATH))
+    {
+        Canvas::PrintTitle("DevCore | Setup Zone");
+        Canvas::PrintWarning("It seems like you do not yet have a config file. Would you like to install a default config? \n  | If not check out '" + HOME_PATH + CONFIG_PATH + "' to configure one manually.");
+        if(Canvas::GetBoolInput(""))
+            Config::load(HOME_PATH + CONFIG_PATH, true);
+    }
+    
+
+    if (argc == 4 && std::string{argv[1]} == "config" && std::string{argv[2]} == "get")
+    {
+        Canvas::PrintBox(std::string(argv[3]) + " is set to " + Config::get(argv[3]) + ".");
+    }
+
+    if (argc == 5 && std::string{argv[1]} == "config" && std::string{argv[2]} == "set")
+    {
+        Config::set(argv[3], argv[4]);
+        Canvas::PrintBox("set " + std::string(argv[3]) + " to " + std::string(argv[4]) + ".");
+    }
+
+    if (argc == 3 && std::string{argv[1]} == "config" && std::string{argv[2]} == "reset")
+    {
+        Canvas::PrintTitle("DevCore | Danger Zone", Canvas::Color::RED);
+        Canvas::PrintWarning("This is your current config, are you sure you want to reset it to the default config?");
+        Canvas::PrintBox(Config::GetKeyValueString(), " devcore.conf ", Canvas::Color::RED);
+        if (Canvas::GetBoolInput(""))
+        {
+            //reset to default
+            Canvas::PrintInfo("Resetting your config, this may take a while.");
+            Config::load(HOME_PATH + CONFIG_PATH, true);
+            Canvas::PrintSuccess("Your config has been reset to its default state.");
+            Canvas::PrintBox(Config::GetKeyValueString(), " devcore.conf ", Canvas::Color::GREEN);
         }
     }
-}
-int main(int argc, char const *argv[])
-{
-    ProjectManager* pm{new ProjectManager};
-    CommandManager* cm{new CommandManager{mainCommand}};
 
-    GetIndexCommand* getIndexCommand{new GetIndexCommand{pm}};
-    cm->AddCommand(std::vector<std::string>{"-I", "--index", "--source"}, getIndexCommand);
-
-    ListCommand* listCommand{new ListCommand{pm}};
-    cm->AddCommand(std::vector<std::string>{"-L", "-Ll", "-Lu", "-Lt"}, listCommand);
-
-
-
-    std::string command;
-    std::vector<std::string> arguments;
-    ParseCommand(argc, argv, command, arguments);
-
-    cm->Execute(command, arguments);
     return 0;
 }
