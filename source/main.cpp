@@ -12,10 +12,7 @@ const std::string HOME_PATH = getenv("HOME");
 int main(int argc, char const *argv[]) {
     if (!Config::load(HOME_PATH + CONFIG_PATH))
     {
-        Canvas::PrintTitle("DevCore | Setup Zone");
-        Canvas::PrintWarning("It seems like you do not yet have a config file. Would you like to install a default config? \n  | If not check out '" + HOME_PATH + CONFIG_PATH + "' to configure one manually.");
-        if(Canvas::GetBoolInput(""))
-            Config::load(HOME_PATH + CONFIG_PATH, true);
+        return Config::setup(HOME_PATH + CONFIG_PATH);
     }
     
 

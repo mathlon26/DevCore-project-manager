@@ -40,6 +40,12 @@ namespace Canvas
         return "\033[4m" + text + "\033[0m";
     }
 
+    inline std::string LinkText(const std::string &text, Color continueColor = Color::DEFAULT)
+    {
+        return "\033[4m" + text + "\033[0m" + ColorToAnsi(continueColor);
+    }
+
+
     // Reset the console color.
     inline std::string ResetColor()
     {
