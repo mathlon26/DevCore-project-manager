@@ -112,7 +112,7 @@ namespace Canvas
         std::cout << "\033[1m" << ColorToAnsi(color)
                   << '*' << std::string(totalWidth, '=') << ' ' 
                   << title << ' ' << std::string(totalWidth, '=')
-                  << '*' << ResetColor() << "\n" << std::endl;
+                  << '*' << ResetColor() << std::endl;
     }
 
     // Print a box around a given (possibly multi-line) text.
@@ -199,6 +199,18 @@ namespace Canvas
         std::cout << std::endl;
         return in == 'Y' || in == 'y';
     }
+
+    inline std::string GetStringInput(const std::string &prompt, const std::string &title = "", Color color = Color::YELLOW, Color titleColor = Color::CYAN)
+    {
+        if (!title.empty())
+            PrintTitle(title, titleColor);
+        
+        PrintColored(prompt, color);
+        std::string input;
+        std::getline(std::cin, input);
+        return input;
+    }
+
 
     // Print a divider line with an optional centered message.
     inline void PrintDivider(const std::string &message = "", Color color = Color::DEFAULT)
@@ -290,7 +302,7 @@ namespace Canvas
 
     // Print a table with headers and rows.
     // Each column's width is determined by the widest element (header or cell) in that column.
-    inline void PrintTable(const std::vector<std::string>& header, const std::vector<std::vector<std::string>>& rows, Color color = Color::DEFAULT)
+    inline void PrintTable(const std::string& title, const std::vector<std::string>& header, const std::vector<std::vector<std::string>>& rows, Color color = Color::DEFAULT)
     {
         size_t cols = header.size();
         std::vector<size_t> colWidths(cols, 0);
@@ -326,7 +338,10 @@ namespace Canvas
         oss << ColorToAnsi(color) << "┌";
         for (size_t i = 0; i < cols; i++)
         {
-            oss << repeat("─", colWidths[i] + 2);
+            if (i == 0)
+                oss << title << repeat("─", colWidths[i] + 2 - DisplayLength(title));
+            else
+                oss << repeat("─", colWidths[i] + 2);
             oss << (i < cols - 1 ? "┬" : "┐");
         }
         oss << ResetColor() << std::endl;
@@ -338,7 +353,7 @@ namespace Canvas
         oss << ColorToAnsi(color) << "│" << ResetColor();
         for (size_t i = 0; i < cols; i++)
         {
-            oss << " " << header[i];
+            oss << " " << ColorToAnsi(Color::YELLOW) << BoldText(header[i]);
             size_t pad = colWidths[i] > DisplayLength(header[i]) ? colWidths[i] - DisplayLength(header[i]) : 0;
             oss << std::string(pad, ' ') << " " << ColorToAnsi(color) << "│" << ResetColor();
         }
