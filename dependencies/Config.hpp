@@ -10,6 +10,10 @@
 #include <algorithm>
 #include <cctype>
 #include <vector>
+#include <filesystem>
+#include <cstdlib>
+
+namespace fs = std::filesystem;
 
 namespace Config {
 
@@ -17,6 +21,8 @@ namespace Config {
 inline std::map<std::string, std::string> configMap;
 // Inline variable to store the name of the loaded configuration file.
 inline std::string configFilename;
+
+inline std::string github = "https://github.com/mathlon26/DevCore-project-manager.git";
 
 const std::vector<std::string> validKeys{
     "projects_path",
@@ -54,9 +60,28 @@ inline void updateFile() {
 // Load configuration from a .conf file with lines in the format "key = value".
 // Lines starting with '#' or empty lines are ignored.
 inline bool load(const std::string &filename, bool install=false) {
-    if (install)
-    {
-        /* code */
+    if (install) {
+        fs::path configPath = filename;
+        fs::path configDir = configPath.parent_path();
+
+        if (!fs::exists(configDir)) {
+            fs::create_directories(configDir);
+        }
+
+        if (!fs::exists(configPath)) {
+            std::string cloneCommand = "git clone " + github + " /tmp/devcore_repo";
+            if (std::system(cloneCommand.c_str()) != 0) {
+                Canvas::PrintErrorExit("Failed to clone repository from " + github);
+            }
+            
+            fs::path sourceConfig = "/tmp/devcore_repo/devcore.conf";
+            if (!fs::exists(sourceConfig)) {
+                Canvas::PrintErrorExit("Default configuration file not found in cloned repository.");
+            }
+            
+            fs::copy_file(sourceConfig, configPath, fs::copy_options::overwrite_existing);
+            fs::remove_all("/tmp/devcore_repo");
+        }
     }
 
 
