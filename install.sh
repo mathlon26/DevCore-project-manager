@@ -86,6 +86,7 @@ if [[ "$continueInstall" =~ ^[Yy] ]]; then
                 mkdir -p "$HOME/.config/devcore/templates/$lang"
                 for template_dir in "templates/$lang"/*; do
                     if [ -d "$template_dir" ]; then
+                        echo "$template_dir" "$HOME/.config/devcore/templates/$lang/"
                         cp -r "$template_dir" "$HOME/.config/devcore/templates/$lang/"
                     fi
                 done
