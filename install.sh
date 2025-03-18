@@ -84,7 +84,11 @@ if [[ "$continueInstall" =~ ^[Yy] ]]; then
             if [ -d "templates/$lang" ]; then
                 echo -e "${GREEN}📂 Copying templates for $lang...${RESET}"
                 mkdir -p "$HOME/.config/devcore/templates/$lang"
-                cp -r "templates/$lang/"* "$HOME/.config/devcore/templates/$lang/"
+                for template_dir in "templates/$lang"/*; do
+                    if [ -d "$template_dir" ]; then
+                        cp -r "$template_dir" "$HOME/.config/devcore/templates/$lang/"
+                    fi
+                done
             else
                 echo -e "${YELLOW}⚠️  No templates found for $lang.${RESET}"
             fi
@@ -126,9 +130,10 @@ if [[ "$continueInstall" =~ ^[Yy] ]]; then
     echo -e "${GREEN}🎉 Installation complete! 🎉${RESET}"
     echo -e "${YELLOW}🔄 Restart your terminal first!${RESET}"
     echo -e "${YELLOW}🔗 Then ensure that $HOME/.local/bin is in your PATH.${RESET}"
-    echo -e "${YELLOW}🧹 If not rerun the devcore install.${RESET}"
+    echo -e "${YELLOW}🧹 If not, rerun the devcore install.${RESET}"
     echo -e "${CYAN}==========================================${RESET}"
 
 else
-    echo -e "${RED}❌ Exiting install. Please create ~/Coding/Projects before running this installer again.${RESET}"
-fi
+    echo -e "${RED}❌ Exiting install. Please create ~/Coding/Projects before running this
+::contentReference[oaicite:0]{index=0}
+ 
