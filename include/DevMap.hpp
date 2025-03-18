@@ -875,7 +875,7 @@ namespace DevMap
     {
         // Clear the console and print a vibrant title.
         Canvas::ClearConsole();
-        Canvas::PrintTitle(u8"DevCore | Danger Zone | Project Deletion Wizard ❌", Canvas::Color::RED);
+        Canvas::PrintColoredLine(u8"*========== DevCore | Danger Zone | Project Deletion Wizard ❌ ==========*", Canvas::Color::RED);
 
         // 1. List projects and ask for the project name to delete.
         ListProjects(true);
