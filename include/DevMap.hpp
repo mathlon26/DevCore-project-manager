@@ -45,6 +45,17 @@ namespace DevMap
     inline std::set<std::string> users;
     inline std::vector<Project> projects;
 
+    const Project* findProjectByName(const std::vector<Project>& projects, const std::string& name) {
+        auto it = std::find_if(projects.begin(), projects.end(), [&name](const Project& project) {
+            return project.name == name;
+        });
+    
+        if (it != projects.end()) {
+            return &(*it);  // Return a pointer to the found project (const pointer)
+        }
+    
+        return nullptr;  // Not found
+    }
 
     std::string getCurrentUser() {
     #ifdef _WIN32
