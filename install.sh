@@ -10,8 +10,6 @@ CYAN="\033[36m"
 WHITE="\033[37m"
 RESET="\033[0m"
 
-export HOME="$HOME_TEMP"
-
 # Banner
 echo -e "${CYAN}==========================================${RESET}"
 echo -e "${BLUE} DevCore Installer - Automated Setup ${RESET}"
@@ -75,21 +73,20 @@ if [[ "$continueInstall" =~ ^[Yy] ]]; then
     echo -e "${CYAN}------------------------------------------${RESET}"
     echo -e "${GREEN}📂 Ensuring the projects directory exists...${RESET}"
     mkdir -p "$HOME/Coding/Projects"
+    export HOME="$HOME"
 
     read -p "Do you want to install preinstalled templates? (y/n): " install_templates
     if [[ "$install_templates" =~ ^[Yy] ]]; then
         echo -e "${GREEN}📦 Installing preinstalled templates...${RESET}"
         for lang in "C++" "C" "Python" "Java"; do
             echo -e "${BLUE}🌟 Creating language: $lang${RESET}"
-            env HOME="$HOME_TEMP" "$HOME/.local/bin/devcore" create-lang "$lang"
+            env HOME="$HOME" "$HOME/.local/bin/devcore" create-lang "$lang"
             if [ -d "templates/$lang" ]; then
                 echo -e "${GREEN}📂 Copying templates for $lang...${RESET}"
-                mkdir -p "$HOME_TEMP/.config/devcore/templates/$lang"
+                mkdir -p "$HOME/.config/devcore/templates/$lang"
                 for template_dir in "templates/$lang"/*; do
                     if [ -d "$template_dir" ]; then
-                        pwd
-                        echo "$template_dir" "$HOME_TEMP/.config/devcore/templates/$lang/"
-                        cp -r "$template_dir" "$HOME_TEMP/.config/devcore/templates/$lang/"
+                        cp -r "$template_dir" "$HOME/.config/devcore/templates/$lang/"
                     fi
                 done
             else
