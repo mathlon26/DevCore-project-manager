@@ -24,19 +24,20 @@ DevCore is a powerful and user-friendly project management tool designed for dev
 
 To install DevCore, follow these simple steps:
 
-1️⃣ Clone the repository:
+1️⃣ Download the install.sh script from github.
+
+2️⃣ Make the project directory:
 ```bash
- git clone https://github.com/yourusername/devcore.git
- cd devcore
+ mkdir ~/Coding/Projects
 ```
 
-2️⃣ Run the installation script:
+3️⃣ Run the installation script in ~/:
 ```bash
  chmod +x install.sh
  ./install.sh
 ```
 
-3️⃣ You’re all set! 🎉 Now you can start using DevCore.
+4️⃣ You’re all set! 🎉 Now you can start using DevCore.
 
 ---
 
@@ -75,6 +76,7 @@ Run the following commands to interact with DevCore:
  devcore list projects   # List all projects
  devcore list users      # List all users
  devcore list languages  # List all supported languages
+ devcore github          # Give a link to the github repository
 ```
 
 ### ❓ **Help Menu**
@@ -118,9 +120,9 @@ This project is licensed under the MIT License.
 
 💡 Found a bug? Have a feature request? Open an issue!
 
-📧 Contact us at [your-email@example.com](mailto:your-email@example.com)
+📧 Contact me at [mathijs.follon@student.uhasselt.be](mailto:mathijs.follon@student.uhasselt.be)
 
-🔗 Follow us on [GitHub](https://github.com/yourusername/devcore)
+🔗 Follow us on [GitHub](https://github.com/mathlon26/devcore)
 
 🚀 Happy coding!
 
