@@ -41,6 +41,9 @@ else
     echo "Warning: devmap.json not found in repository."
 fi
 
+# Extract the projects_path from devcore.conf
+PROJECTS_PATH="$HOME/Coding/Projects"
+
 # Ask the user if they want preinstalled templates
 read -p "Do you want to install preinstalled templates? (y/n): " install_templates
 if [[ "$install_templates" =~ ^[Yy] ]]; then
