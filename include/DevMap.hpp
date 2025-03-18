@@ -800,6 +800,8 @@ namespace DevMap
         // 7. Create the project directory.
         CreateProject(newProj);
         Canvas::PrintSuccess(u8"🚀 Project directory created successfully!");
+        bool openInCode = Canvas::GetBoolInput(u8"🎨 Would you like to open this project in Visual Studio Code? ", "", Canvas::Color::CYAN);
+
 
         // 8. If a template was selected, copy its contents into the new project folder.
         if (useTemplate && !selectedTemplate.empty())
@@ -856,6 +858,16 @@ namespace DevMap
             Canvas::PrintError("Unable to write to DevMap file: " + devmapFileName.string());
         }
         Canvas::PrintSuccess(u8"✅ Project '" + newProj.name + "' created successfully!");
+
+        if (openInCode)
+        {
+            std::string openCodeCmd = "code " / projectsPath / projectLang / projectFolderName;
+            if (std::system(openCodeCmd.c_str()) != 0)
+            {
+                Canvas::PrintError(u8"❌ Failed to open the project in Visual Studio Code, make sure its installed and added to your PATH.");
+            }
+        }
+        
     }
 
 
