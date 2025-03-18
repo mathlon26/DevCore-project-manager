@@ -839,7 +839,7 @@ namespace DevMap
         {
             fs::path templatePath = fs::path(Main::HOME_PATH) / Main::TEMPLATE_PATH / projectLang / selectedTemplate;
             fs::path projectPath = projectsPath / projectLang / projectFolderName;
-
+            std::cout << templatePath << std::endl;
             try
             {
                 CopyDirectory(templatePath, projectPath);
