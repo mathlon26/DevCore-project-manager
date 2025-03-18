@@ -134,6 +134,5 @@ if [[ "$continueInstall" =~ ^[Yy] ]]; then
     echo -e "${CYAN}==========================================${RESET}"
 
 else
-    echo -e "${RED}❌ Exiting install. Please create ~/Coding/Projects before running this
-::contentReference[oaicite:0]{index=0}
- 
+    echo -e "${RED}❌ Exiting install. Please create ~/Coding/Projects before running this!"
+fi 
