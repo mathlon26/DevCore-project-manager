@@ -1,84 +1,89 @@
 #!/bin/bash
 set -e
 
-echo "MAKE SURE YOU HAVE THE FOLLOWING DIRECTORY! ~/Coding/Projects, this script will handle all else."
+echo "\033[31mMAKE SURE YOU HAVE THE FOLLOWING DIRECTORY! ~/Coding/Projects, this script will handle all else.\033[0m"
 read -p "Did you create this directory? (y/n): " continueInstall
 if [[ "$continueInstall" =~ ^[Yy] ]]; then
 
-echo "Cloning the DevCore repository..."
-git clone https://github.com/mathlon26/DevCore-project-manager.git
+    # Check if the repository already exists and remove it if so.
+    if [ -d "DevCore-project-manager" ]; then
+        echo "Existing DevCore repository found. Removing it..."
+        rm -rf DevCore-project-manager
+    fi
 
-cd DevCore-project-manager
+    echo "Cloning the DevCore repository..."
+    git clone https://github.com/mathlon26/DevCore-project-manager.git
 
-echo "Building DevCore (running run.sh)..."
-chmod +x run.sh
-./run.sh
+    cd DevCore-project-manager
 
-# Verify that the devcore binary was built
-if [ ! -f devcore ]; then
-    echo "Error: devcore binary not found. Build may have failed."
-    exit 1
-fi
+    echo "Building DevCore (running run.sh)..."
+    chmod +x run.sh
+    ./run.sh
 
-# Move the devcore binary to a directory in the user's PATH (using $HOME/.local/bin)
-echo "Moving the devcore binary to \$HOME/.local/bin..."
-mkdir -p "$HOME/.local/bin"
-mv devcore "$HOME/.local/bin/"
-echo "Done. Make sure \$HOME/.local/bin is in your PATH."
+    # Verify that the devcore binary was built
+    if [ ! -f devcore ]; then
+        echo "Error: devcore binary not found. Build may have failed."
+        exit 1
+    fi
 
-# Create necessary config directories
-echo "Setting up configuration directories..."
-mkdir -p "$HOME/.config/devcore/templates"
-mkdir -p "$HOME/.config/devcore"
+    # Move the devcore binary to a directory in the user's PATH (using $HOME/.local/bin)
+    echo "Moving the devcore binary to \$HOME/.local/bin..."
+    mkdir -p "$HOME/.local/bin"
+    mv devcore "$HOME/.local/bin/"
+    echo "Done. Make sure \$HOME/.local/bin is in your PATH."
 
-# Copy configuration files from the repository
-echo "Copying configuration files to \$HOME/.config/devcore..."
-if [ -f devcore.conf ]; then
-    cp devcore.conf "$HOME/.config/devcore/devcore.conf"
-else
-    echo "Warning: devcore.conf not found in repository."
-fi
+    # Create necessary config directories
+    echo "Setting up configuration directories..."
+    mkdir -p "$HOME/.config/devcore/templates"
+    mkdir -p "$HOME/.config/devcore"
 
-if [ -f devmap.json ]; then
-    cp devmap.json "$HOME/.config/devcore/devmap.json"
-else
-    echo "Warning: devmap.json not found in repository."
-fi
+    # Copy configuration files from the repository
+    echo "Copying configuration files to \$HOME/.config/devcore..."
+    if [ -f devcore.conf ]; then
+        cp devcore.conf "$HOME/.config/devcore/devcore.conf"
+    else
+        echo "Warning: devcore.conf not found in repository."
+    fi
 
-# Extract the projects_path from devcore.conf
-PROJECTS_PATH="$HOME/Coding/Projects"
+    if [ -f devmap.json ]; then
+        cp devmap.json "$HOME/.config/devcore/devmap.json"
+    else
+        echo "Warning: devmap.json not found in repository."
+    fi
 
-# Ask the user if they want preinstalled templates
-read -p "Do you want to install preinstalled templates? (y/n): " install_templates
-if [[ "$install_templates" =~ ^[Yy] ]]; then
-    echo "Installing preinstalled templates..."
-    # Define languages to install
-    for lang in "C++" "C" "Python" "Java"; do
-        echo "Creating language: $lang"
-        "$HOME/.local/bin/devcore" create-lang "$lang"
-        # Check if a templates directory exists for this language in the repository.
-        if [ -d "templates/$lang" ]; then
-            echo "Copying templates for $lang..."
-            mkdir -p "$HOME/.config/devcore/templates/$lang"
-            cp -r "templates/$lang/"* "$HOME/.config/devcore/templates/$lang/"
-        else
-            echo "No templates found for $lang in repository."
-        fi
-    done
-else
-    echo "Skipping preinstalled templates."
-fi
+    # Extract the projects_path from devcore.conf
+    PROJECTS_PATH="$HOME/Coding/Projects"
 
-# Remove the cloned repository
-cd ..
-rm -rf DevCore-project-manager
+    # Ask the user if they want preinstalled templates
+    read -p "Do you want to install preinstalled templates? (y/n): " install_templates
+    if [[ "$install_templates" =~ ^[Yy] ]]; then
+        echo "Installing preinstalled templates..."
+        # Define languages to install
+        for lang in "C++" "C" "Python" "Java"; do
+            echo "Creating language: $lang"
+            "$HOME/.local/bin/devcore" create-lang "$lang"
+            # Check if a templates directory exists for this language in the repository.
+            if [ -d "templates/$lang" ]; then
+                echo "Copying templates for $lang..."
+                mkdir -p "$HOME/.config/devcore/templates/$lang"
+                cp -r "templates/$lang/"* "$HOME/.config/devcore/templates/$lang/"
+            else
+                echo "No templates found for $lang in repository."
+            fi
+        done
+    else
+        echo "Skipping preinstalled templates."
+    fi
 
-echo "Adding it to your path."
-sudo cp "$HOME/.local/bin/devcore" /usr/bin
+    # Remove the cloned repository
+    cd ..
+    rm -rf DevCore-project-manager
 
-echo "Installation complete!"
+    echo "Adding it to your path."
+    sudo cp "$HOME/.local/bin/devcore" /usr/bin
 
-    
+    echo "Installation complete!"
+
 else
     echo "Exiting install, go and create ~/Coding/Projects before running this installer again."
 fi

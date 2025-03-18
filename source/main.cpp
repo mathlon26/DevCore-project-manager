@@ -304,55 +304,65 @@ int main(int argc, char const *argv[]) {
     }
     else if (argc == 2 && command == "update")
     {
-        // Assuming Main::HOME_PATH contains the absolute path to the home directory
-        std::string homeDir = Main::HOME_PATH;
-        std::string repoUrl = "https://github.com/mathlon26/DevCore-project-manager.git";
-        std::string tempRepoDir = homeDir + "/DevCore-project-manager-temp";
+        // Define paths for convenience.
+        std::string homeDir         = Main::HOME_PATH;
+        std::string repoUrl         = "https://github.com/mathlon26/DevCore-project-manager.git";
+        std::string tempRepoDir     = homeDir + "/DevCore-project-manager-temp";
+        std::string installScriptPath = homeDir + "/install.sh";
+        std::string installedRepoDir  = homeDir + "/DevCore-project-manager";
 
-        std::string cdCmd = "cd " + homeDir;
-        system(cdCmd.c_str());
-
-        // Clone the repository to a temporary directory
+        // Clone the repository to a temporary directory.
         std::string cloneCmd = "git clone " + repoUrl + " " + tempRepoDir;
         if (system(cloneCmd.c_str()) != 0)
         {
             Canvas::PrintError("Failed to clone the repository.");
-            return;
+            system(("rm -rf " + tempRepoDir).c_str());
+            return 1;
         }
 
-        // Move install.sh from the temporary repository to the home directory
+        // Move install.sh from the temporary repository to the home directory.
         std::string moveCmd = "mv " + tempRepoDir + "/install.sh " + homeDir;
         if (system(moveCmd.c_str()) != 0)
         {
-            Canvas::PrintError("Failed to move install.sh to home directory.");
-            std::string removeInstallCmd = "rm -f " + tempRepoDir;
-            system(removeInstallCmd.c_str());
-            return;
+            Canvas::PrintError("Failed to move install.sh to the home directory.");
+            system(("rm -rf " + tempRepoDir).c_str());
+            system(("rm -f " + installScriptPath).c_str());
+            return 1;
         }
 
-        // Remove the temporary repository directory
-        std::string removeRepoCmd = "rm -rf " + tempRepoDir;
-        system(removeRepoCmd.c_str());
+        // Clean up the temporary repository directory.
+        system(("rm -rf " + tempRepoDir).c_str());
 
-        // Run the install.sh script from the home directory
-        std::string runCmd = "chmod +x ./install.sh";
-        if (system(runCmd.c_str()) != 0)
+        // Remove any existing installed repository to avoid conflicts.
+        system(("rm -rf " + installedRepoDir).c_str());
+
+        // Set executable permissions on install.sh.
+        std::string chmodCmd = "chmod +x " + installScriptPath;
+        if (system(chmodCmd.c_str()) != 0)
         {
-            Canvas::PrintError("Failed to update permissions of the install.sh script.");
+            Canvas::PrintError("Failed to update permissions of install.sh.");
+            system(("rm -f " + installScriptPath).c_str());
+            return 1;
         }
 
-        std::string runCmd = "sudo " + homeDir + "/install.sh";
-        if (system(runCmd.c_str()) != 0)
+        // Run install.sh using sudo.
+        std::string installCmd = "sudo " + installScriptPath;
+        if (system(installCmd.c_str()) != 0)
         {
-            Canvas::PrintError("Failed to run the install.sh script.");
+            Canvas::PrintError("Failed to run install.sh.");
+            // Cleanup in case of failure: remove install.sh and any installed repository.
+            system(("rm -f " + installScriptPath).c_str());
+            system(("rm -rf " + installedRepoDir).c_str());
+            return 1;
         }
 
-        // Remove install.sh after running it
-        std::string removeInstallCmd = "rm -f " + homeDir + "/install.sh";
-        system(removeInstallCmd.c_str());
+        // Remove install.sh after it has been executed.
+        system(("rm -f " + installScriptPath).c_str());
 
         Canvas::PrintInfo("Update complete.");
     }
+
+
 
 
     Canvas::PrintCommandError(argc, argv);
