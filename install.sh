@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+echo "MAKE SURE YOU HAVE THE FOLLOWING DIRECTORY! ~/Coding/Projects, this script will handle all else."
+read -p "Did you create this directory? (y/n): " continueInstall
+if [[ "$continueInstall" =~ ^[Yy] ]]; then
+
 echo "Cloning the DevCore repository..."
 git clone https://github.com/mathlon26/DevCore-project-manager.git
 
@@ -70,3 +74,8 @@ cd ..
 rm -rf DevCore-project-manager
 
 echo "Installation complete!"
+
+    
+else
+    echo "Exiting install, go and create ~/Coding/Projects before running this installer again."
+fi
