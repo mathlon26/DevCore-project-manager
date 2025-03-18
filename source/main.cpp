@@ -351,6 +351,7 @@ int main(int argc, char const *argv[]) {
             return 1;
         }
 
+        setenv("HOME_TEMP", getenv("HOME"), 0);
         setenv("HOME_TEMP", getenv("HOME"), 1);
 
         // Run install.sh using sudo.
