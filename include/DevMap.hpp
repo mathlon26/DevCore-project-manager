@@ -680,6 +680,37 @@ namespace DevMap
         }
     }
 
+    inline void CopyDirectory(const fs::path& source, const fs::path& destination)
+    {
+        try
+        {
+            // Ensure destination exists
+            if (!fs::exists(destination))
+            {
+                fs::create_directories(destination);
+            }
+
+            for (const auto& entry : fs::directory_iterator(source))
+            {
+                const fs::path& pathInSource = entry.path();
+                fs::path pathInDestination = destination / pathInSource.filename();
+
+                if (fs::is_directory(pathInSource))
+                {
+                    CopyDirectory(pathInSource, pathInDestination);
+                }
+                else
+                {
+                    fs::copy_file(pathInSource, pathInDestination, fs::copy_options::overwrite_existing);
+                }
+            }
+        }
+        catch (const std::exception& e)
+        {
+            Canvas::PrintError(u8"Error copying directory: " + std::string(e.what()));
+        }
+    }
+
     inline void CreateProjectWizard()
     {
         // Clear the console and print a vibrant title.
@@ -808,9 +839,10 @@ namespace DevMap
         {
             fs::path templatePath = fs::path(Main::HOME_PATH) / Main::TEMPLATE_PATH / projectLang / selectedTemplate;
             fs::path projectPath = projectsPath / projectLang / projectFolderName;
+
             try
             {
-                fs::copy(templatePath, projectPath, fs::copy_options::recursive | fs::copy_options::overwrite_existing);
+                CopyDirectory(templatePath, projectPath);
                 Canvas::PrintSuccess(u8"✨ Template '" + selectedTemplate + "' applied to project.");
             }
             catch (const std::exception &e)
