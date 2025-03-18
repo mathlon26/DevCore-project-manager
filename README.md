@@ -2,6 +2,7 @@
 
 DevCore is a powerful and user-friendly project management tool designed for developers. It helps you manage your projects, configurations, and development languages efficiently. With a simple command-line interface, you can create, delete, and list projects with ease.
 
+Templates functionality is present, I just need to replace the placeholders with actual templates.
 ---
 
 ## 📜 Features
