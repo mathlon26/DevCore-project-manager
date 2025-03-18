@@ -44,19 +44,20 @@ fi
 # Ask the user if they want preinstalled templates
 read -p "Do you want to install preinstalled templates? (y/n): " install_templates
 if [[ "$install_templates" =~ ^[Yy] ]]; then
-    echo "Creating language templates for C++, C, Python, and Java..."
-    "$HOME/.local/bin/devcore" create-lang "C++"
-    "$HOME/.local/bin/devcore" create-lang "C"
-    "$HOME/.local/bin/devcore" create-lang "Python"
-    "$HOME/.local/bin/devcore" create-lang "Java"
-
-    # Copy the preinstalled templates from the repository's templates/lang directory
-    if [ -d "templates/lang" ]; then
-        echo "Copying preinstalled templates to \$HOME/.config/devcore/templates/..."
-        cp -r templates/lang/* "$HOME/.config/devcore/templates/"
-    else
-        echo "No preinstalled templates found in the repository (templates/lang missing)."
-    fi
+    echo "Installing preinstalled templates..."
+    # Define languages to install
+    for lang in "C++" "C" "Python" "Java"; do
+        echo "Creating language: $lang"
+        "$HOME/.local/bin/devcore" create-lang "$lang"
+        # Check if a templates directory exists for this language in the repository.
+        if [ -d "templates/$lang" ]; then
+            echo "Copying templates for $lang..."
+            mkdir -p "$HOME/.config/devcore/templates/$lang"
+            cp -r "templates/$lang/"* "$HOME/.config/devcore/templates/$lang/"
+        else
+            echo "No templates found for $lang in repository."
+        fi
+    done
 else
     echo "Skipping preinstalled templates."
 fi
