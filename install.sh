@@ -99,12 +99,34 @@ if [[ "$continueInstall" =~ ^[Yy] ]]; then
     rm -rf DevCore-project-manager-temp
 
     echo -e "${CYAN}------------------------------------------${RESET}"
-    echo -e "${GREEN}📌 Adding the devcore binary to system PATH...${RESET}"
-    sudo cp "$HOME/.local/bin/devcore" /usr/bin
+    echo -e "${GREEN}📌 Replacing the devcore binary...${RESET}"
+
+    # Define paths
+    NEW_BINARY="$HOME/.local/bin/devcore"
+    TEMP_BINARY="/tmp/devcore.tmp"
+    FINAL_BINARY="/usr/bin/devcore"
+
+    # Move the new binary to a temporary location first
+    sudo mv "$NEW_BINARY" "$TEMP_BINARY"
+
+    # Create a script to update the binary after the process exits
+    UPDATE_SCRIPT="/tmp/update_devcore.sh"
+    echo "#!/bin/bash" | sudo tee $UPDATE_SCRIPT > /dev/null
+    echo "sleep 2" | sudo tee -a $UPDATE_SCRIPT > /dev/null  # Ensure the process exits
+    echo "sudo mv $TEMP_BINARY $FINAL_BINARY" | sudo tee -a $UPDATE_SCRIPT > /dev/null
+    echo "sudo rm -- \"$0\"" | sudo tee -a $UPDATE_SCRIPT > /dev/null  # Delete script after execution
+
+    # Make the update script executable
+    sudo chmod +x $UPDATE_SCRIPT
+
+    # Schedule the update script to run in the background
+    nohup sudo bash $UPDATE_SCRIPT >/dev/null 2>&1 &
 
     echo -e "${CYAN}==========================================${RESET}"
     echo -e "${GREEN}🎉 Installation complete! 🎉${RESET}"
-    echo -e "${YELLOW}🔗 Ensure that $HOME/.local/bin is in your PATH.${RESET}"
+    echo -e "${YELLOW}🔄 Restart your terminal first!${RESET}"
+    echo -e "${YELLOW}🔗 Then ensure that $HOME/.local/bin is in your PATH.${RESET}"
+    echo -e "${YELLOW}🧹 If not rerun the devcore install.${RESET}"
     echo -e "${CYAN}==========================================${RESET}"
 
 else
