@@ -360,6 +360,7 @@ int main(int argc, char const *argv[]) {
         system(("rm -f " + installScriptPath).c_str());
 
         Canvas::PrintInfo("Update complete.");
+        return 0;
     }
 
 
