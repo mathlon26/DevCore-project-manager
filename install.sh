@@ -73,6 +73,9 @@ fi
 cd ..
 rm -rf DevCore-project-manager
 
+echo "Adding it to your path."
+sudo cp "$HOME/.local/bin/devcore" /usr/bin
+
 echo "Installation complete!"
 
     

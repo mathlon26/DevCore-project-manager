@@ -138,11 +138,17 @@ int HandleList(int argc, char const *argv[])
             DevMap::ListUsers();
         else if (param1 == "languages" || param1 == "lang" || param1 == "-l" )
             DevMap::ListLanguages();
+        else if (param1 == "templates" || param1 == "templ" || param1 == "-t" )
+            DevMap::ListTemplates();
+        else
+            Canvas::PrintCommandError(argc, argv);
     }
     else if ((command == "list-all" || command == "-la") && argc == 3)
     {
         if (param1 == "projects" || param1 == "-p")
             DevMap::ListProjects(true);
+        else
+            Canvas::PrintCommandError(argc, argv);
     }
     else
     {
@@ -208,6 +214,32 @@ int HandleDeleteLang(int argc, char const *argv[])
     return 0;
 }
 
+int HandleAddTemplate(int argc, char const *argv[])
+{
+    if (argc != 2)
+    {
+        Canvas::PrintCommandError(argc, argv);
+        return 0;
+    }
+
+    DevMap::AddTemplate();
+
+    return 0;
+}
+
+int HandleRemoveTemplate(int argc, char const *argv[])
+{
+    if (argc != 2)
+    {
+        Canvas::PrintCommandError(argc, argv);
+        return 0;
+    }
+
+    DevMap::RemoveTemplate();
+
+    return 0;
+}
+
 int main(int argc, char const *argv[]) {
     if (!Config::load(Main::HOME_PATH + Main::CONFIG_PATH))
         Config::setup(Main::HOME_PATH + Main::CONFIG_PATH);
@@ -252,6 +284,14 @@ int main(int argc, char const *argv[]) {
     {
         return HandleDeleteLang(argc, argv);
     }
+    else if (command == "add-template")
+    {
+        return HandleAddTemplate(argc, argv);
+    }
+    else if (command == "remove-template")
+    {
+        return HandleRemoveTemplate(argc, argv);
+    }
     else if (argc == 2 && command == "--help")
     {
         PrintHelp();
@@ -264,8 +304,56 @@ int main(int argc, char const *argv[]) {
     }
     else if (argc == 2 && command == "update")
     {
-        
+        // Assuming Main::HOME_PATH contains the absolute path to the home directory
+        std::string homeDir = Main::HOME_PATH;
+        std::string repoUrl = "https://github.com/mathlon26/DevCore-project-manager.git";
+        std::string tempRepoDir = homeDir + "/DevCore-project-manager-temp";
+
+        std::string cdCmd = "cd " + homeDir;
+        system(cdCmd.c_str());
+
+        // Clone the repository to a temporary directory
+        std::string cloneCmd = "git clone " + repoUrl + " " + tempRepoDir;
+        if (system(cloneCmd.c_str()) != 0)
+        {
+            Canvas::PrintError("Failed to clone the repository.");
+            return;
+        }
+
+        // Move install.sh from the temporary repository to the home directory
+        std::string moveCmd = "mv " + tempRepoDir + "/install.sh " + homeDir;
+        if (system(moveCmd.c_str()) != 0)
+        {
+            Canvas::PrintError("Failed to move install.sh to home directory.");
+            std::string removeInstallCmd = "rm -f " + tempRepoDir;
+            system(removeInstallCmd.c_str());
+            return;
+        }
+
+        // Remove the temporary repository directory
+        std::string removeRepoCmd = "rm -rf " + tempRepoDir;
+        system(removeRepoCmd.c_str());
+
+        // Run the install.sh script from the home directory
+        std::string runCmd = "chmod +x ./install.sh";
+        if (system(runCmd.c_str()) != 0)
+        {
+            Canvas::PrintError("Failed to update permissions of the install.sh script.");
+        }
+
+        std::string runCmd = "sudo " + homeDir + "/install.sh";
+        if (system(runCmd.c_str()) != 0)
+        {
+            Canvas::PrintError("Failed to run the install.sh script.");
+        }
+
+        // Remove install.sh after running it
+        std::string removeInstallCmd = "rm -f " + homeDir + "/install.sh";
+        system(removeInstallCmd.c_str());
+
+        Canvas::PrintInfo("Update complete.");
     }
+
 
     Canvas::PrintCommandError(argc, argv);
     return 1;

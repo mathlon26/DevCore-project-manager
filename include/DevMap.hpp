@@ -480,6 +480,45 @@ namespace DevMap
         Canvas::PrintTable("", header, rows, Canvas::Color::CYAN);
     }
 
+    inline void ListTemplates()
+    {
+        std::vector<std::string> header = {"Templates"};
+        std::vector<std::vector<std::string>> rows;
+
+        // Build the template directory path
+        std::string templateDir = Main::HOME_PATH + Main::TEMPLATE_PATH + "/";
+
+        try {
+            // Check if the template directory exists and is a directory
+            if (fs::exists(templateDir) && fs::is_directory(templateDir)) {
+                // Iterate over first-level directories (subdir1)
+                for (const auto& entry : fs::directory_iterator(templateDir)) {
+                    if (entry.is_directory()) {
+                        std::string subdir1Name = entry.path().filename().string();
+
+                        // Iterate over second-level directories (subdir2) inside each subdir1
+                        for (const auto& subentry : fs::directory_iterator(entry.path())) {
+                            if (subentry.is_directory()) { // You can modify this condition if you also want files
+                                std::string subdir2Name = subentry.path().filename().string();
+                                // Combine the names with a '/'
+                                std::string templateName = subdir1Name + "/" + subdir2Name;
+                                rows.push_back({templateName});
+                            }
+                        }
+                    }
+                }
+            } else {
+                std::cerr << "Directory not found: " << templateDir << std::endl;
+            }
+        }
+        catch (const fs::filesystem_error& e) {
+            std::cerr << "Filesystem error: " << e.what() << std::endl;
+        }
+
+        // Display the table with the default color.
+        Canvas::PrintTable("", header, rows, Canvas::Color::CYAN);
+    }
+
     inline void ListLanguages()
     {
         std::vector<std::string> header;
@@ -851,9 +890,9 @@ namespace DevMap
         
         // 2. Confirm deletion with the user.
         Canvas::ClearConsole();
-        bool confirmation1 = Canvas::GetBoolInput(u8"🔥 Are you absolutely sure you want to delete '" + projectName + "' located at '" + projPath.string() + "'?", "Delete Project Confirmation 1", Canvas::Color::RED);
+        bool confirmation1 = Canvas::GetBoolInput(u8"🔥 Are you absolutely sure you want to delete '" + projectName + "' located at '" + Canvas::LinkText(projPath.string(), Canvas::Color::RED) + "'?", "Delete Project Confirmation 1", Canvas::Color::RED);
         Canvas::ClearConsole();
-        bool confirmation2 = Canvas::GetBoolInput(u8"🔥 Please confirm again: Delete '" + projectName + "' from '" + projPath.string() + "'?", "Delete Project Confirmation 2", Canvas::Color::RED);
+        bool confirmation2 = Canvas::GetBoolInput(u8"🔥 Please confirm again: Delete '" + projectName + "' from '" + Canvas::LinkText(projPath.string(), Canvas::Color::RED) + "'?", "Delete Project Confirmation 2", Canvas::Color::RED);
 
         if (confirmation1 && confirmation2)
         {
@@ -862,12 +901,12 @@ namespace DevMap
             auto removedCount = fs::remove_all(projPath, ec);
             if (ec)
             {
-                Canvas::PrintError("Failed to delete project directory '" + projPath.string() + "'. Error: " + ec.message());
+                Canvas::PrintError("Failed to delete project directory '" + Canvas::LinkText(projPath.string(), Canvas::Color::RED) + "'. Error: " + ec.message());
                 return;
             }
             else
             {
-                Canvas::PrintInfo("Deleted " + std::to_string(removedCount) + " items from " + projPath.string());
+                Canvas::PrintInfo("Deleted " + std::to_string(removedCount) + " items from " + Canvas::LinkText(projPath.string()));
             }
 
             // 4. Remove the project from the projects vector.
@@ -908,6 +947,79 @@ namespace DevMap
             Canvas::PrintInfo(u8"Project deletion aborted.");
         }
     }
+
+    inline void RemoveTemplate()
+    {
+        Canvas::ClearConsole();
+        ListTemplates();
+
+        std::string templateDir = Canvas::GetStringInput(u8"👉 Please enter a template listed above that you want to delete: ", "", Canvas::Color::CYAN);
+        std::string delDir = Main::HOME_PATH + Main::TEMPLATE_PATH + "/" + templateDir;
+        Canvas::ClearConsole();
+        bool confirmation1 = Canvas::GetBoolInput(u8"🔥 Are you absolutely sure you want to delete '" + templateDir + "' located at '" + Canvas::LinkText(delDir, Canvas::Color::RED) + "'?", "Delete Template Confirmation 1", Canvas::Color::RED);
+        Canvas::ClearConsole();
+        bool confirmation2 = Canvas::GetBoolInput(u8"🔥 Please confirm again: Delete '" + templateDir + "' from '" + Canvas::LinkText(delDir, Canvas::Color::RED) + "'?", "Delete Template Confirmation 2", Canvas::Color::RED);
+
+        if (confirmation1 && confirmation2)
+        {
+            // 3. Attempt to delete the project directory recursively.
+            std::error_code ec;
+            auto removedCount = fs::remove_all(delDir, ec);
+            if (ec)
+            {
+                Canvas::PrintError("Failed to delete template directory '" + Canvas::LinkText(delDir, Canvas::Color::RED) + "'. Error: " + ec.message());
+                return;
+            }
+            else
+            {
+                Canvas::PrintInfo("Deleted " + std::to_string(removedCount) + " items from " + Canvas::LinkText(delDir));
+            }
+
+            Canvas::PrintSuccess(u8"✅ Template '" + templateDir + "' deleted successfully!");
+        }
+        else
+        {
+            Canvas::PrintInfo(u8"Project deletion aborted.");
+        }
+
+    }
+
+    inline void AddTemplate()
+    {
+        Canvas::ClearConsole();
+        std::string name = Canvas::GetStringInput(u8"👉 Please enter a template name: ", "", Canvas::Color::CYAN);
+        std::string lang = Canvas::GetStringInput(u8"👉 Please enter the template language: ", "", Canvas::Color::CYAN);
+        std::string source = Canvas::GetStringInput(u8"👉 Please enter the template source folder path: ", "", Canvas::Color::CYAN);
+
+        if (std::find(languages.begin(), languages.end(), lang) == languages.end())
+        {
+            Canvas::PrintWarning("The language does not exist yet, would you like to create it?");
+            if (Canvas::GetBoolInput("   "))
+            {
+                CreateLang(lang);
+            }
+            else
+            {
+                Canvas::PrintInfo("Aborting template addition.");
+                return;
+            }
+        }
+
+        // Construct the target directory path
+        std::string targetDir = Main::HOME_PATH + Main::TEMPLATE_PATH + lang + "/" + name;
+        
+        // Create the target directory if it doesn't exist
+        std::string mkdirCommand = "mkdir -p " + targetDir;
+        system(mkdirCommand.c_str());
+
+        // Copy the contents of the source directory into the target directory
+        // Using '/*' to copy the contents rather than the directory itself
+        std::string copyCommand = "cp -r " + source + "/* " + targetDir;
+        system(copyCommand.c_str());
+
+        Canvas::PrintSuccess("Succesfully added your template to the " + Canvas::LinkText(".config/devcore/templates", Canvas::Color::GREEN) + " directory.");
+    }
+
 
 
 
