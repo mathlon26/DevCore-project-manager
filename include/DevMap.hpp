@@ -837,9 +837,8 @@ namespace DevMap
         // 8. If a template was selected, copy its contents into the new project folder.
         if (useTemplate && !selectedTemplate.empty())
         {
-            fs::path templatePath = fs::path(Main::HOME_PATH) / Main::TEMPLATE_PATH / projectLang / selectedTemplate;
+            fs::path templatePath = Main::HOME_PATH + Main::TEMPLATE_PATH + "/" + projectLang + "/" + selectedTemplate;
             fs::path projectPath = projectsPath / projectLang / projectFolderName;
-            std::cout << templatePath << std::endl;
             try
             {
                 CopyDirectory(templatePath, projectPath);
