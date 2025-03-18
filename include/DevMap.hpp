@@ -861,7 +861,7 @@ namespace DevMap
 
         if (openInCode)
         {
-            std::string openCodeCmd = "code " / projectsPath / projectLang / projectFolderName;
+            std::string openCodeCmd = "code " + std::string(projectsPath / projectLang / projectFolderName);
             if (std::system(openCodeCmd.c_str()) != 0)
             {
                 Canvas::PrintError(u8"❌ Failed to open the project in Visual Studio Code, make sure its installed and added to your PATH.");
