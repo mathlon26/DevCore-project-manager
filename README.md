@@ -66,9 +66,9 @@ Run the following commands to interact with DevCore:
  devcore delete-project     # Delete a project (with confirmation)
 ```
 
-### 🌍 **Language Management**
+### 🖥️ **Coding Language Management**
 ```bash
- devcore create-lang <lang> # Add a new language
+ devcore create-lang <lang> # Add a new language directory for all projects using this language
  devcore delete-lang <lang> # Remove a language (only if empty)
 ```
 
@@ -82,7 +82,7 @@ Run the following commands to interact with DevCore:
 
 ### ❓ **Help Menu**
 ```bash
- devcore --help  # Show this help menu
+ devcore --help  # Show a help menu and some aliases
 ```
 
 ---
