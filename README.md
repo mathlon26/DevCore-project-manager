@@ -72,12 +72,24 @@ Run the following commands to interact with DevCore:
  devcore delete-lang <lang> # Remove a language (only if empty)
 ```
 
+### 📋 **Templates Management**
+```bash
+ devcore add-template       # Start template add wizard
+ devcore remove-template    # Start template remove wizard
+```
+
 ### 📜 **List Information**
 ```bash
  devcore list projects   # List all projects
  devcore list users      # List all users
+ devcore list templates  # List all templates
  devcore list languages  # List all supported languages
  devcore github          # Give a link to the github repository
+```
+
+### ⚙️ **Update DevCore**
+```bash
+ devcore update   # rebuilds devcore to the latest version
 ```
 
 ### ❓ **Help Menu**

@@ -30,10 +30,16 @@ void PrintHelp() {
         Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore list [projects|users|languages]         " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - List items\n" +
         Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore list-all projects                       " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - List all projects with details\n\n" +
 
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore add-template                            " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Add a new template\n" +
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore remove-template                         " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Remove an existing template\n\n" +
+
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore github                                  " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Open the GitHub repository\n" +
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore update                                  " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Update DevCore (wiht build)\n" +
         Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore --help                                  " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Display this help menu";
-        
+
     Canvas::PrintBox(helpText, Canvas::ColorToAnsi(Canvas::Color::CYAN) + " 🛈 Usage ", Canvas::Color::CYAN, 3);
 }
+
 
 
 int HandleConfig(int argc, char const *argv[])
