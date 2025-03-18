@@ -15,7 +15,12 @@
 #include <algorithm>
 #include <cstdlib>
 #include <nlohmann/json.hpp>
-
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#include <pwd.h>
+#endif
 namespace fs = std::filesystem;
 
 namespace DevMap
@@ -39,6 +44,22 @@ namespace DevMap
     inline std::vector<std::string> languages;
     inline std::set<std::string> users;
     inline std::vector<Project> projects;
+
+
+    std::string getCurrentUser() {
+    #ifdef _WIN32
+        const char* user = std::getenv("USERNAME");
+    #else
+        const char* user = std::getenv("USER");
+        // Fallback in case getenv doesn't return the username.
+        if (!user) {
+            struct passwd* pw = getpwuid(getuid());
+            if (pw)
+                user = pw->pw_name;
+        }
+    #endif
+        return user ? std::string(user) : "unknown";
+    }
 
     // Helper: Convert a time string ("HH:MM DD-MM-YYYY") to a time_t value.
     inline time_t parseTime(const std::string &timeStr)
@@ -251,7 +272,7 @@ namespace DevMap
                         newProj.name = folderName; // Default: use folder name as project name.
                         newProj.folderName = folderName;
                         newProj.lang = language;
-                        newProj.createdBy = "unknown";
+                        newProj.createdBy = getCurrentUser();
                         newProj.createdAt = std::time(nullptr);
                         newProj.size = getFolderSize(projectPath);
                         newProj.usesGit = usesGit(projectPath);
