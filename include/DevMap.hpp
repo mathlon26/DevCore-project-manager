@@ -106,29 +106,31 @@ namespace DevMap
         }
     }
 
-    // Synchronize the DevMap JSON data with the filesystem.
     inline void syncDevMap()
     {
         users.clear();
 
-        // 1. Populate languages vector from JSON and ensure directories exist.
+        // 1. Validate languages from JSON and remove those that no longer exist.
+        std::vector<std::string> validLanguages;
         if (devmapData.contains("Languages") && devmapData["Languages"].is_array())
         {
-            languages.clear();
             for (const auto &lang : devmapData["Languages"])
             {
                 std::string language = lang.get<std::string>();
-                languages.push_back(language);
                 fs::path langPath = projectsPath / language;
-                if (!fs::exists(langPath))
+                if (fs::exists(langPath))
                 {
-                    fs::create_directories(langPath);
-                    Canvas::PrintInfo("Created language directory: " + langPath.string());
+                    validLanguages.push_back(language);
+                }
+                else
+                {
+                    Canvas::PrintInfo("Language '" + language + "' has been moved or deleted: " + langPath.string());
                 }
             }
         }
+        languages = validLanguages;
 
-        // 2. Scan projectsPath for language directories not in JSON and update.
+        // 2. Scan the filesystem for language directories not listed in JSON and add them.
         for (const auto &entry : fs::directory_iterator(projectsPath))
         {
             if (entry.is_directory())
@@ -137,66 +139,85 @@ namespace DevMap
                 if (std::find(languages.begin(), languages.end(), langDir) == languages.end())
                 {
                     languages.push_back(langDir);
-                    devmapData["Languages"].push_back(langDir);
                     Canvas::PrintInfo("Added new language from filesystem to DevMap: " + langDir);
                 }
             }
         }
 
-        // 3. Populate projects vector from JSON.
-        projects.clear();
+        // Update the Languages JSON array.
+        nlohmann::json newLanguagesJson = nlohmann::json::array();
+        for (const auto &lang : languages)
+        {
+            newLanguagesJson.push_back(lang);
+        }
+        devmapData["Languages"] = newLanguagesJson;
+
+        // 3. Rebuild the projects vector from JSON, keeping only those projects that exist.
+        std::vector<Project> validProjects;
+        nlohmann::json validProjectsJson = nlohmann::json::array();
         if (devmapData.contains("Projects") && devmapData["Projects"].is_array())
         {
             for (const auto &projData : devmapData["Projects"])
             {
-                Project proj;
-                proj.name = projData.value("name", "");
-                proj.folderName = projData.value("folderName", "");
-                proj.lang = projData.value("lang", "");
-                proj.createdBy = projData.value("created_by", "");
-                std::string createdAtStr = projData.value("created_at", "");
-                proj.createdAt = parseTime(createdAtStr);
-                proj.size = projData.value("size", 0);
-                proj.usesGit = projData.value("git", false);
-                projects.push_back(proj);
-            }
-        }
+                std::string lang = projData.value("lang", "");
+                std::string folderName = projData.value("folderName", "");
+                fs::path projPath = projectsPath / lang / folderName;
+                if (fs::exists(projPath))
+                {
+                    Project proj;
+                    proj.name = projData.value("name", "");
+                    proj.folderName = folderName;
+                    proj.lang = lang;
+                    proj.createdBy = projData.value("created_by", "");
+                    std::string createdAtStr = projData.value("created_at", "");
+                    proj.createdAt = parseTime(createdAtStr);
+                    proj.size = projData.value("size", 0);
+                    proj.usesGit = projData.value("git", false);
+                    validProjects.push_back(proj);
 
-        // 4. Ensure each project directory exists; if missing, create it.
-        for (const auto &proj : projects)
-        {
-            fs::path projPath = projectsPath / proj.lang / proj.folderName;
-            users.insert(proj.createdBy);
-            if (!fs::exists(projPath))
-            {
-                CreateProject(proj);
+                    nlohmann::json projJson = {
+                        {"name", proj.name},
+                        {"folderName", proj.folderName},
+                        {"lang", proj.lang},
+                        {"created_by", proj.createdBy},
+                        {"created_at", timeToString(proj.createdAt)},
+                        {"size", proj.size},
+                        {"git", proj.usesGit}
+                    };
+                    validProjectsJson.push_back(projJson);
+
+                    users.insert(proj.createdBy);
+                }
+                else
+                {
+                    Canvas::PrintInfo("Project '" + projPath.string() + "' has been moved or deleted.");
+                }
             }
         }
+        projects = validProjects;
+        devmapData["Projects"] = validProjectsJson;
 
         // 4.5. Update existing project data (size and Git status) from the filesystem.
-        if (devmapData.contains("Projects") && devmapData["Projects"].is_array())
+        for (auto &projData : devmapData["Projects"])
         {
-            for (auto &projData : devmapData["Projects"])
+            std::string language = projData.value("lang", "");
+            std::string folderName = projData.value("folderName", "");
+            fs::path projPath = projectsPath / language / folderName;
+            if (fs::exists(projPath) && fs::is_directory(projPath))
             {
-                std::string language = projData.value("lang", "");
-                std::string folderName = projData.value("folderName", "");
-                fs::path projPath = projectsPath / language / folderName;
-                if (fs::exists(projPath) && fs::is_directory(projPath))
+                std::string fullProjPath = projPath.string();
+                size_t currentSize = getFolderSize(fullProjPath);
+                bool currentUsesGit = usesGit(fullProjPath);
+                projData["size"] = currentSize;
+                projData["git"] = currentUsesGit;
+                // Update the corresponding project in the projects vector.
+                for (auto &proj : projects)
                 {
-                    std::string fullProjPath = projPath.string();
-                    size_t currentSize = getFolderSize(fullProjPath);
-                    bool currentUsesGit = usesGit(fullProjPath);
-                    projData["size"] = currentSize;
-                    projData["git"] = currentUsesGit;
-                    // Also update the corresponding project in the projects vector.
-                    for (auto &proj : projects)
+                    if (proj.folderName == folderName && proj.lang == language)
                     {
-                        if (proj.folderName == folderName && proj.lang == language)
-                        {
-                            proj.size = currentSize;
-                            proj.usesGit = currentUsesGit;
-                            break;
-                        }
+                        proj.size = currentSize;
+                        proj.usesGit = currentUsesGit;
+                        break;
                     }
                 }
             }
@@ -224,9 +245,9 @@ namespace DevMap
                     }
                     if (!found)
                     {
-                        // New project detected on filesystem; add it with default values.
+                        // New project detected on the filesystem; add it with default values.
                         Project newProj;
-                        std::string projectPath = Main::HOME_PATH + std::string(projectsPath) + language + "/" + folderName;
+                        std::string projectPath = (projectsPath / language / folderName).string();
                         newProj.name = folderName; // Default: use folder name as project name.
                         newProj.folderName = folderName;
                         newProj.lang = language;
@@ -236,7 +257,6 @@ namespace DevMap
                         newProj.usesGit = usesGit(projectPath);
                         projects.push_back(newProj);
 
-                        // Update the JSON data.
                         nlohmann::json newProjJson = {
                             {"name", newProj.name},
                             {"folderName", newProj.folderName},
@@ -244,7 +264,8 @@ namespace DevMap
                             {"created_by", newProj.createdBy},
                             {"created_at", timeToString(newProj.createdAt)},
                             {"size", newProj.size},
-                            {"git", newProj.usesGit}};
+                            {"git", newProj.usesGit}
+                        };
                         devmapData["Projects"].push_back(newProjJson);
                         Canvas::PrintInfo("Added new project from filesystem to DevMap: " + folderName + " in " + language);
                     }
@@ -252,7 +273,7 @@ namespace DevMap
             }
         }
 
-        // 6. Optionally update users vector from JSON.
+        // 6. Optionally update the users vector from JSON.
         if (devmapData.contains("Users") && devmapData["Users"].is_array())
         {
             for (const auto user : devmapData["Users"])
@@ -274,6 +295,7 @@ namespace DevMap
             Canvas::PrintError("Unable to write to DevMap file: " + devmapFileName.string());
         }
     }
+
 
     // Load the DevMap from a JSON file.
     inline bool load(const std::string &filename, bool install = false)
@@ -451,6 +473,101 @@ namespace DevMap
         Canvas::PrintTable("", header, rows, Canvas::Color::CYAN);
     }
 
+    inline void DeleteLanguage(std::string &lang)
+    {
+        // Verify that the language exists in the languages vector.
+        auto it = std::find(languages.begin(), languages.end(), lang);
+        if (it == languages.end())
+        {
+            Canvas::PrintInfo("Language '" + lang + "' does not exist.");
+            return;
+        }
+
+        // Construct paths for the language and template directories.
+        fs::path langPath = projectsPath / lang;
+        fs::path templatePath = Main::HOME_PATH + Main::TEMPLATE_PATH + "/" + lang;
+
+        bool returnEarly = false;
+        // Check if the language directory exists and is empty.
+        if (fs::exists(langPath))
+        {
+            if (!fs::is_empty(langPath))
+            {
+                Canvas::PrintError("Cannot delete language directory '" + langPath.string() + "': Directory is not empty. You will have to empty this yourself or by deleting each project with DevCore commands.");
+                returnEarly = true;
+            }
+        }
+
+        // Check if the template directory exists and is empty.
+        if (fs::exists(templatePath))
+        {
+            if (!fs::is_empty(templatePath))
+            {
+                Canvas::PrintError("Cannot delete template directory '" + templatePath.string() + "': Directory is not empty. You will have to empty this yourself or by deleting each template with DevCore commands");
+                returnEarly = true;
+            }
+        }
+
+        if (returnEarly)
+            return;
+        
+
+        // Attempt to delete the language directory.
+        if (fs::exists(langPath))
+        {
+            if (fs::remove(langPath))
+                Canvas::PrintInfo("Deleted language directory: " + langPath.string());
+            else
+            {
+                Canvas::PrintError("Failed to delete language directory: " + langPath.string());
+                return;
+            }
+        }
+        
+        // Attempt to delete the template directory.
+        if (fs::exists(templatePath))
+        {
+            if (fs::remove(templatePath))
+                Canvas::PrintInfo("Deleted template directory: " + templatePath.string());
+            else
+            {
+                Canvas::PrintError("Failed to delete template directory: " + templatePath.string());
+                return;
+            }
+        }
+
+        // Remove the language from the languages vector.
+        languages.erase(it);
+
+        // Update the JSON: remove the language from the "Languages" array.
+        if (devmapData.contains("Languages") && devmapData["Languages"].is_array())
+        {
+            nlohmann::json newLangArray = nlohmann::json::array();
+            for (const auto &item : devmapData["Languages"])
+            {
+                if (item.get<std::string>() != lang)
+                {
+                    newLangArray.push_back(item);
+                }
+            }
+            devmapData["Languages"] = newLangArray;
+        }
+
+        // Write the updated JSON back to the file.
+        std::ofstream outFile(devmapFileName);
+        if (outFile.is_open())
+        {
+            outFile << devmapData.dump(4); // Pretty-print with indentations.
+            outFile.close();
+            Canvas::PrintInfo("DevMap updated successfully.");
+        }
+        else
+        {
+            Canvas::PrintError("Unable to write updated DevMap to: " + devmapFileName.string());
+        }
+    }
+
+
     inline void CreateLang(std::string &lang)
     {
         // Check if the language is already in the vector.
@@ -465,6 +582,13 @@ namespace DevMap
             {
                 fs::create_directories(langPath);
                 Canvas::PrintInfo("Created language directory: " + langPath.string());
+            }
+
+            fs::path templatePath =  Main::HOME_PATH + Main::TEMPLATE_PATH + '/' + lang;
+            if (!fs::exists(templatePath))
+            {
+                fs::create_directories(templatePath);
+                Canvas::PrintInfo("Created template directory: " + templatePath.string());
             }
 
             // Ensure the JSON "Languages" array exists.
@@ -503,6 +627,7 @@ namespace DevMap
         Canvas::PrintTitle(u8"DevCore | Project Creation Wizard 🚀", Canvas::Color::MAGENTA);
 
         // 1. Ask for the project language.
+        ListLanguages();
         std::string projectLang = Canvas::GetStringInput(u8"👉 Please enter the project language: ", "", Canvas::Color::CYAN);
         // Verify if the language exists; if not, offer to create it.
         if (std::find(languages.begin(), languages.end(), projectLang) == languages.end())
@@ -628,7 +753,7 @@ namespace DevMap
             }
             catch (const std::exception &e)
             {
-                Canvas::PrintError(u8"❌ Error copying template: " + std::string(e.what()));
+                Canvas::PrintError(u8"Error copying template: " + std::string(e.what()));
             }
             // Update project size after copying template contents.
             newProj.size = getFolderSize(projectPath.string());
@@ -645,7 +770,7 @@ namespace DevMap
             }
             else
             {
-                Canvas::PrintError(u8"❌ Failed to initialize Git repository in " + projectPath.string());
+                Canvas::PrintError(u8"Failed to initialize Git repository in " + projectPath.string());
             }
         }
 
@@ -660,8 +785,109 @@ namespace DevMap
             {"git", newProj.usesGit}
         };
         devmapData["Projects"].push_back(projJson);
+        std::ofstream outFile(devmapFileName);
+        if (outFile.is_open())
+        {
+            outFile << devmapData.dump(4); // Pretty-print with indentations.
+            outFile.close();
+        }
+        else
+        {
+            Canvas::PrintError("Unable to write to DevMap file: " + devmapFileName.string());
+        }
         Canvas::PrintSuccess(u8"✅ Project '" + newProj.name + "' created successfully!");
     }
+
+
+    inline void DeleteProjectWizard()
+    {
+        // Clear the console and print a vibrant title.
+        Canvas::ClearConsole();
+        Canvas::PrintTitle(u8"DevCore | Danger Zone | Project Deletion Wizard ❌", Canvas::Color::RED);
+
+        // 1. List projects and ask for the project name to delete.
+        ListProjects(true);
+        std::string projectName = Canvas::GetStringInput(u8"👉 Please enter the project name you want to delete: ", "", Canvas::Color::CYAN);
+        
+        Project project;
+        bool found = false;
+        for (auto &proj : projects)
+        {
+            if (proj.name == projectName)
+            {
+                found = true;
+                project = proj;
+                break; // Exit loop once the project is found.
+            }
+        }
+
+        if (!found || !fs::exists(projectsPath / project.lang / project.folderName))
+        {
+            Canvas::PrintErrorExit("You tried to delete '" + projectName + "'. No such project exists");
+        }
+
+        fs::path projPath = projectsPath / project.lang / project.folderName;
+        
+        // 2. Confirm deletion with the user.
+        Canvas::ClearConsole();
+        bool confirmation1 = Canvas::GetBoolInput(u8"🔥 Are you absolutely sure you want to delete '" + projectName + "' located at '" + projPath.string() + "'?", "Delete Project Confirmation 1", Canvas::Color::RED);
+        Canvas::ClearConsole();
+        bool confirmation2 = Canvas::GetBoolInput(u8"🔥 Please confirm again: Delete '" + projectName + "' from '" + projPath.string() + "'?", "Delete Project Confirmation 2", Canvas::Color::RED);
+
+        if (confirmation1 && confirmation2)
+        {
+            // 3. Attempt to delete the project directory recursively.
+            std::error_code ec;
+            auto removedCount = fs::remove_all(projPath, ec);
+            if (ec)
+            {
+                Canvas::PrintError("Failed to delete project directory '" + projPath.string() + "'. Error: " + ec.message());
+                return;
+            }
+            else
+            {
+                Canvas::PrintInfo("Deleted " + std::to_string(removedCount) + " items from " + projPath.string());
+            }
+
+            // 4. Remove the project from the projects vector.
+            projects.erase(std::remove_if(projects.begin(), projects.end(),
+                [&](const Project &p) { return p.name == projectName && p.lang == project.lang; }),
+                projects.end());
+
+            // 5. Update the devmapData JSON: remove the project entry.
+            if (devmapData.contains("Projects") && devmapData["Projects"].is_array())
+            {
+                nlohmann::json newProjects = nlohmann::json::array();
+                for (auto &projJson : devmapData["Projects"])
+                {
+                    if (projJson.value("name", "") != projectName)
+                    {
+                        newProjects.push_back(projJson);
+                    }
+                }
+                devmapData["Projects"] = newProjects;
+
+                // Write the updated JSON back to the file.
+                std::ofstream outFile(devmapFileName);
+                if (outFile.is_open())
+                {
+                    outFile << devmapData.dump(4); // Pretty-print with indentations.
+                    outFile.close();
+                }
+                else
+                {
+                    Canvas::PrintError("Unable to write updated DevMap to: " + devmapFileName.string());
+                }
+            }
+            
+            Canvas::PrintSuccess(u8"✅ Project '" + project.name + "' deleted successfully!");
+        }
+        else
+        {
+            Canvas::PrintInfo(u8"Project deletion aborted.");
+        }
+    }
+
 
 
 } // namespace DevMap

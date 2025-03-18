@@ -7,6 +7,7 @@
 #include <sstream>
 #include <vector>
 #include <regex>
+#include <limits>
 #include <cstdio>
 
 namespace Canvas
@@ -105,9 +106,9 @@ namespace Canvas
     // Print a styled title with a border made of Unicode box-drawing characters.
     inline void PrintTitle(const std::string &title, Color color = Color::CYAN)
     {
-        int padding = 4;
+        int padding = 12;
         int titleLength = DisplayLength(title);
-        int totalWidth = titleLength + padding * 2;
+        int totalWidth = titleLength + padding;
         // Title line.
         std::cout << "\033[1m" << ColorToAnsi(color)
                   << '*' << std::string(totalWidth, '=') << ' ' 
@@ -194,8 +195,10 @@ namespace Canvas
         if (!title.empty())
             PrintTitle(title, titleColor);
         
-        PrintColored(prompt + "[Y/n]", color);
+        PrintColored(prompt + " [Y/n] ", color);
         char in = std::cin.get();
+        // Flush any leftover characters (including newline)
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         std::cout << std::endl;
         return in == 'Y' || in == 'y';
     }
@@ -270,7 +273,8 @@ namespace Canvas
         // corresponds to a relevant command from the help output.
         std::string command = argv[0];
         std::string searchTerm = argv[1];
-        std::regex pattern(R"((devcore\s+config\s+\S+.*)│)", std::regex_constants::icase);
+        std::string patternString = std::string(R"((devcore\s+)") + searchTerm + R"(\s+\S+.*)│)";
+        std::regex pattern(patternString, std::regex_constants::icase);
 
         std::istringstream iss(helpOutput);
         std::string line;

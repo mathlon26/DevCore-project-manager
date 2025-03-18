@@ -12,19 +12,29 @@
 
 void PrintHelp() {
     Canvas::PrintTitle("DevCore | Help Menu", Canvas::Color::CYAN);
-    Canvas::PrintBox(
-        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore config get <key>           " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Get a config value\n" +
-        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore config set <key> <value>   " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Set a config value\n" +
-        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore config reset               " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Reset config to default\n" +
-        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore config view                " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - View current config\n" +
-        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore devmap reset               " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Reset devmap to default\n" +
-        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore devmap view                " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - View current devmap\n" +
-        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore --help                     " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Display the menu you are looking at",
-        Canvas::ColorToAnsi(Canvas::Color::CYAN) + " 🛈 Usage ",
-        Canvas::Color::CYAN, 
-        3 // fix offset issue for '🛈'
-    );
+    std::string helpText =
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore config get <key>                        " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Get a config value\n" +
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore config set <key> <value>                " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Set a config value\n" +
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore config reset                            " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Reset config to default\n" +
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore config view                             " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - View current config\n\n" +
+
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore devmap reset                            " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Reset devmap to default\n" +
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore devmap view                             " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - View current devmap\n\n" +
+
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore create-project                          " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Create a new project\n" +
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore delete-project                          " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Delete an existing project\n\n" +
+
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore create-lang <lang>                      " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Create a new language\n" +
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore delete-lang <lang>                      " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Delete a language (if empty)\n\n" +
+
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore list [projects|users|languages]         " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - List items\n" +
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore list-all projects                       " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - List all projects with details\n\n" +
+
+        Canvas::ColorToAnsi(Canvas::Color::YELLOW) + "devcore --help                                  " + Canvas::ColorToAnsi(Canvas::Color::MAGENTA) + " - Display this help menu";
+        
+    Canvas::PrintBox(helpText, Canvas::ColorToAnsi(Canvas::Color::CYAN) + " 🛈 Usage ", Canvas::Color::CYAN, 3);
 }
+
 
 int HandleConfig(int argc, char const *argv[])
 {
@@ -155,6 +165,19 @@ int HandleCreateProject(int argc, char const *argv[])
     return 0;
 }
 
+int HandleDeleteProject(int argc, char const *argv[])
+{
+    if (argc != 2)
+    {
+        Canvas::PrintCommandError(argc, argv);
+        return 0;
+    }
+
+    DevMap::DeleteProjectWizard();
+
+    return 0;
+}
+
 int HandleCreateLang(int argc, char const *argv[])
 {
     if (argc != 3)
@@ -166,6 +189,21 @@ int HandleCreateLang(int argc, char const *argv[])
     std::string lang = argv[2];
 
     DevMap::CreateLang(lang);
+
+    return 0;
+}
+
+int HandleDeleteLang(int argc, char const *argv[])
+{
+    if (argc != 3)
+    {
+        Canvas::PrintCommandError(argc, argv);
+        return 0;
+    }
+
+    std::string lang = argv[2];
+
+    DevMap::DeleteLanguage(lang);
 
     return 0;
 }
@@ -202,14 +240,31 @@ int main(int argc, char const *argv[]) {
     {
         return HandleCreateProject(argc, argv);
     }
+    else if (command == "delete-project")
+    {
+        return HandleDeleteProject(argc, argv);
+    }
     else if (command == "create-lang")
     {
         return HandleCreateLang(argc, argv);
     }
-    else if (command == "--help")
+    else if (command == "delete-lang")
+    {
+        return HandleDeleteLang(argc, argv);
+    }
+    else if (argc == 2 && command == "--help")
     {
         PrintHelp();
         return 0;
+    }
+    else if (argc == 2 && command == "github")
+    {
+        Canvas::PrintBox(Canvas::ColorToAnsi(Canvas::Color::GREEN) + Canvas::BoldText("Follow the github repository and give it a star!") + "\n" + Canvas::LinkText("https://github.com/mathlon26/DevCore-project-manager"), " Give DevCore a star ⭐ ", Canvas::Color::PINK, 1);
+        return 0;
+    }
+    else if (argc == 2 && command == "update")
+    {
+        
     }
 
     Canvas::PrintCommandError(argc, argv);
