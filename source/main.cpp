@@ -378,8 +378,8 @@ int main(int argc, char const *argv[]) {
         std::string projectName = Canvas::GetStringInput("👉 What project do you want to open? ");
 
         const DevMap::Project *project = DevMap::findProjectByName(DevMap::projects, projectName);
-
-        std::string openCodeCmd = "code " + std::string(DevMap::projectsPath / project->lang / project->folderName);
+        std::string editor = Config::get("editor");
+        std::string openCodeCmd = editor + " " + std::string(DevMap::projectsPath / project->lang / project->folderName);
         if (std::system(openCodeCmd.c_str()) != 0)
         {
             Canvas::PrintError(u8"❌ Failed to open the project in Visual Studio Code, make sure its installed and added to your PATH.");

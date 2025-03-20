@@ -27,7 +27,7 @@ inline std::string github = "https://github.com/mathlon26/DevCore-project-manage
 
 const std::vector<std::string> validKeys{
     "projects_path",
-    "test"
+    "editor"
 };
 
 // Utility function to trim whitespace from both ends of a string.
@@ -210,14 +210,14 @@ void validate()
 // If the key is not among the validKeys, print an error and exit.
 inline std::string get(const std::string &key) {
     validate();
-    if (std::find(validKeys.begin(), validKeys.end(), key) == validKeys.end()) {
+    if (std::find(validKeys.begin(), validKeys.end(), key) == validKeys.end()) {        
         Canvas::PrintErrorExit("Invalid key '" + key + "' should not even be in the configuration. Why are you looking for it?");
     }
     auto it = configMap.find(key);
     if (it != configMap.end()) {
         return it->second;
     }
-    Canvas::PrintErrorExit("Unable to retrieve key '" + key + "' from the configuration.");
+    Canvas::PrintErrorExit("Required key '" + key + "' is not found in the configuration. Add '" + key + " = <" + key + ">' to your config file manually or by using 'devcore set " + key + " <" + key + ">'");
     return ""; // Unreachable, but added to satisfy the return type.
 }
 
