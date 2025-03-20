@@ -217,7 +217,7 @@ inline std::string get(const std::string &key) {
     if (it != configMap.end()) {
         return it->second;
     }
-    Canvas::PrintErrorExit("Required key '" + key + "' is not found in the configuration. Add '" + key + " = <" + key + ">' to your config file manually or by using 'devcore set " + key + " <" + key + ">'");
+    Canvas::PrintErrorExit("Required key '" + key + "' is not found in the configuration. Add '" + key + " = <" + key + ">' to your config file manually or by using 'devcore config set " + key + " <" + key + ">'");
     return ""; // Unreachable, but added to satisfy the return type.
 }
 
