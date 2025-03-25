@@ -5,6 +5,11 @@ Templates functionality is present, I just need to replace the placeholders with
 
 ---
 
+## REQUIREMENTS
+You need (nlhomann json dependencie)[https://github.com/nlohmann/json]
+
+---
+
 ## 📜 Features
 
 ✅ **Manage Development Projects** - Easily create and delete projects.
