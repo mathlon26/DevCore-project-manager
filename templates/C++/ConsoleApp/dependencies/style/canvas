@@ -1,0 +1,508 @@
+#ifndef STYLE_CANVAS
+#define STYLE_CANVAS
+
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <sstream>
+#include <vector>
+#include <regex>
+#include <limits>
+#include <cstdio>
+#include <chrono>
+#include <iomanip>
+
+// Extended color enumeration, including a DEFAULT for resetting styles.
+enum class Color { WHITE, BLACK, RED, GREEN, BLUE, CYAN, MAGENTA, YELLOW, LIGHT_GREEN, PINK, DEFAULT };
+
+// Background colors.
+enum class BgColor { WHITE, BLACK, RED, GREEN, BLUE, CYAN, MAGENTA, YELLOW, LIGHT_GREEN, PINK, DEFAULT };
+
+// Additional text attributes.
+enum class TextAttribute { BOLD, UNDERLINE, ITALIC, BLINK, REVERSE, RESET };
+
+// Print levels.
+enum class LogLevel { INFO, WARNING, ERROR };
+
+class CanvasStyle
+{
+public:
+    // Convert a Color to its corresponding ANSI foreground code.
+    static inline std::string Foreground(Color color)
+    {
+        switch(color)
+        {
+            case Color::WHITE:       return "\033[37m";
+            case Color::BLACK:       return "\033[30m";
+            case Color::RED:         return "\033[31m";
+            case Color::GREEN:       return "\033[32m";
+            case Color::YELLOW:      return "\033[33m";
+            case Color::BLUE:        return "\033[34m";
+            case Color::MAGENTA:     return "\033[35m";
+            case Color::CYAN:        return "\033[36m";
+            case Color::LIGHT_GREEN: return "\033[92m"; // Bright green.
+            case Color::PINK:        return "\033[95m"; // Bright magenta.
+            case Color::DEFAULT:
+            default:                 return "\033[0m";
+        }
+    }
+
+    // Convert a BgColor to its corresponding ANSI background code.
+    static inline std::string Background(BgColor bg)
+    {
+        switch(bg)
+        {
+            case BgColor::WHITE:       return "\033[47m";
+            case BgColor::BLACK:       return "\033[40m";
+            case BgColor::RED:         return "\033[41m";
+            case BgColor::GREEN:       return "\033[42m";
+            case BgColor::YELLOW:      return "\033[43m";
+            case BgColor::BLUE:        return "\033[44m";
+            case BgColor::MAGENTA:     return "\033[45m";
+            case BgColor::CYAN:        return "\033[46m";
+            case BgColor::LIGHT_GREEN: return "\033[102m"; // Bright green background.
+            case BgColor::PINK:        return "\033[105m"; // Bright magenta background.
+            case BgColor::DEFAULT:
+            default:                   return "\033[0m";
+        }
+    }
+
+    // Convert a Color to its corresponding string representation.
+    static inline std::string ColorToString(Color color)
+    {
+        switch(color)
+        {
+            case Color::WHITE:       return "white";
+            case Color::BLACK:       return "black";
+            case Color::RED:         return "red";
+            case Color::GREEN:       return "green";
+            case Color::YELLOW:      return "yellow";
+            case Color::BLUE:        return "blue";
+            case Color::MAGENTA:     return "magenta";
+            case Color::CYAN:        return "cyan";
+            case Color::LIGHT_GREEN: return "light green";
+            case Color::PINK:        return "pink";
+            case Color::DEFAULT:
+            default:                 return "";
+        }
+    }
+
+    // Apply a single text attribute.
+    static inline std::string Attribute(TextAttribute attr)
+    {
+        switch(attr)
+        {
+            case TextAttribute::BOLD:      return "\033[1m";
+            case TextAttribute::UNDERLINE: return "\033[4m";
+            case TextAttribute::ITALIC:    return "\033[3m";
+            case TextAttribute::BLINK:     return "\033[5m";
+            case TextAttribute::REVERSE:   return "\033[7m";
+            case TextAttribute::RESET:
+            default:                       return "\033[0m";
+        }
+    }
+
+    // Combine multiple styles: foreground, background, and attributes.
+    static inline std::string ApplyStyles(const std::string &text,
+                                            Color fg = Color::DEFAULT,
+                                            BgColor bg = BgColor::DEFAULT,
+                                            const std::vector<TextAttribute>& attrs = {})
+    {
+        std::string styleCode;
+        // Append attributes.
+        for (const auto &attr : attrs)
+            styleCode += Attribute(attr);
+        // Append foreground and background.
+        styleCode += Foreground(fg) + Background(bg);
+        return styleCode + text + Attribute(TextAttribute::RESET);
+    }
+
+    // Convenience functions for bold and underline.
+    static inline std::string BoldText(const std::string &text)
+    {
+        return ApplyStyles(text, Color::DEFAULT, BgColor::DEFAULT, {TextAttribute::BOLD});
+    }
+
+    static inline std::string UnderlineText(const std::string &text)
+    {
+        return ApplyStyles(text, Color::DEFAULT, BgColor::DEFAULT, {TextAttribute::UNDERLINE});
+    }
+
+    // Link style: underlined text with an optional color change after.
+    static inline std::string LinkText(const std::string &text, Color continueColor = Color::DEFAULT)
+    {
+        return UnderlineText(text) + Foreground(continueColor);
+    }
+
+    // Reset the console style.
+    static inline std::string Reset()
+    {
+        return "\033[0m";
+    }
+
+    // Calculate the visual length of a string, ignoring ANSI escape sequences.
+    static inline size_t DisplayLength(const std::string &text)
+    {
+        size_t length = 0;
+        bool in_escape = false;
+        for (size_t i = 0; i < text.size(); ++i)
+        {
+            if (!in_escape)
+            {
+                if (text[i] == '\033')
+                    in_escape = true;
+                else
+                    ++length;
+            }
+            else
+            {
+                if (text[i] == 'm')
+                    in_escape = false;
+            }
+        }
+        return length;
+    }
+
+    // Print colored text with optional background.
+    static inline void PrintColored(const std::string &text, Color fg = Color::DEFAULT, BgColor bg = BgColor::DEFAULT)
+    {
+        std::cout << Foreground(fg) << Background(bg) << text << Reset();
+    }
+
+    // Print colored text with newline.
+    static inline void PrintColoredLine(const std::string &text, Color fg = Color::DEFAULT, BgColor bg = BgColor::DEFAULT, bool endl = true)
+    {
+        PrintColored(text, fg, bg);
+        if (endl)
+            std::cout << std::endl;
+    }
+
+    // Print a horizontal line with a specified Unicode character.
+    static inline void PrintLine(const std::string &ch = "─", int length = 50, Color fg = Color::DEFAULT)
+    {
+        std::string line;
+        for (int i = 0; i < length; i++)
+            line += ch;
+        PrintColoredLine(line, fg, BgColor::DEFAULT, false);
+    }
+
+    // Print a styled title with borders.
+    static inline void PrintTitle(const std::string &title, Color fg = Color::CYAN)
+    {
+        int padding = 12;
+        int titleLength = DisplayLength(title);
+        int totalWidth = titleLength + padding;
+        std::cout << Attribute(TextAttribute::BOLD) << Foreground(fg)
+                  << '*' << std::string(totalWidth, '=') << ' ' 
+                  << title << ' ' << std::string(totalWidth, '=') 
+                  << '*' << Reset() << std::endl;
+    }
+
+    // Print a box around a given text with customizable border style.
+    // borderStyle: 0 = single line, 1 = double line.
+    static inline void PrintBox(const std::string &text, const std::string &title = "",
+                                Color fg = Color::GREEN, int fixOffset = 0, int borderStyle = 0)
+    {
+        // Border characters for single and double lines.
+        const std::vector<std::string> singleTop  = {"┌", "─", "┐"};
+        const std::vector<std::string> singleSide = {"│", "│"};
+        const std::vector<std::string> singleBot  = {"└", "─", "┘"};
+
+        const std::vector<std::string> doubleTop  = {"╔", "═", "╗"};
+        const std::vector<std::string> doubleSide = {"║", "║"};
+        const std::vector<std::string> doubleBot  = {"╚", "═", "╝"};
+
+        const auto& top = (borderStyle == 1) ? doubleTop : singleTop;
+        const auto& side = (borderStyle == 1) ? doubleSide : singleSide;
+        const auto& bot = (borderStyle == 1) ? doubleBot : singleBot;
+
+        std::istringstream iss(text);
+        std::string line;
+        int maxLength = 0;
+        std::vector<std::string> lines;
+        while (std::getline(iss, line))
+        {
+            lines.push_back(line);
+            int dlen = DisplayLength(line);
+            if (dlen > maxLength)
+                maxLength = dlen;
+        }
+        // Top border with title.
+        std::cout << Foreground(fg) << top[0] << " " << title;
+        int extra = maxLength + 1 - static_cast<int>(DisplayLength(title));
+        for (int i = 0; i < extra + fixOffset; i++)
+            std::cout << top[1];
+        std::cout << " " << top[2] << Reset() << std::endl;
+
+        // Content lines.
+        for (const auto &l : lines)
+        {
+            std::cout << Foreground(fg) << side[0] << " " << Reset();
+            std::cout << l;
+            int pad = maxLength - DisplayLength(l);
+            std::cout << std::string(pad, ' ') << Foreground(fg) << " " << side[1] << Reset() << std::endl;
+        }
+        // Bottom border.
+        std::cout << Foreground(fg) << bot[0];
+        for (int i = 0; i < maxLength + 2; i++)
+            std::cout << bot[1];
+        std::cout << bot[2] << Reset() << std::endl;
+    }
+
+    // Print messages with symbols.
+    static inline void PrintSuccess(const std::string &message)
+    {
+        PrintColoredLine(u8"✔ | " + message, Color::GREEN);
+    }
+
+    static inline void PrintWarning(const std::string &message)
+    {
+        PrintColoredLine(u8"⚠ | " + message, Color::YELLOW);
+    }
+
+    static inline void PrintError(const std::string &message)
+    {
+        PrintColoredLine(u8"✖ | " + message, Color::RED);
+    }
+
+    // Exit the program with an error message.
+    static inline void PrintErrorExit(const std::string &error, int code = -1)
+    {
+        PrintError(error);
+        exit(code);
+    }
+
+    static inline void PrintInfo(const std::string &message)
+    {
+        PrintColoredLine(u8"🛈 | " + message, Color::CYAN);
+    }
+
+    // Clear the entire console screen (Unix-like systems with ANSI support).
+    static inline void ClearConsole()
+    {
+        std::cout << "\033[2J\033[H";
+    }
+
+    // Clear the last printed line (if supported by terminal).
+    static inline void ClearLastLine()
+    {
+        // Moves the cursor up one line and clears the line.
+        std::cout << "\033[A\033[2K";
+    }
+
+    // Get boolean input from the user.
+    static inline bool GetBoolInput(const std::string &prompt, const std::string &title = "",
+                                    Color promptColor = Color::YELLOW, Color titleColor = Color::CYAN)
+    {
+        if (!title.empty())
+            PrintColoredLine(BoldText(title), titleColor);
+        
+        PrintColored(prompt + " [Y/n] ", promptColor);
+        char in = std::cin.get();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << std::endl;
+        return in == 'Y' || in == 'y';
+    }
+
+    // Get a string input from the user.
+    static inline std::string GetStringInput(const std::string &prompt, const std::string &title = "",
+                                               Color promptColor = Color::YELLOW, Color titleColor = Color::CYAN)
+    {
+        if (!title.empty())
+            PrintColoredLine(BoldText(title), titleColor);
+        
+        PrintColored(prompt, promptColor);
+        std::string input;
+        std::getline(std::cin, input);
+        return input;
+    }
+
+    // Print a divider line with an optional centered message.
+    static inline void PrintDivider(const std::string &message = "", Color fg = Color::DEFAULT)
+    {
+        int width = 50;
+        if (message.empty())
+        {
+            PrintLine("─", width, fg);
+            std::cout << std::endl;
+        }
+        else
+        {
+            int pad = (width - static_cast<int>(DisplayLength(message)) - 2) / 2;
+            std::cout << Foreground(fg) << std::string(pad, ' ') 
+                      << " " << message << " " 
+                      << std::string(pad, ' ') << Reset() << std::endl;
+        }
+    }
+
+    // Alignment options for table cells.
+    enum class Align { LEFT, CENTER, RIGHT };
+
+    // Print a table with headers and rows.
+    // Each column's width is determined by the widest element in that column.
+    // 'alignments' vector allows individual column alignment.
+    static inline void PrintTable(const std::string& title,
+                                  const std::vector<std::string>& header,
+                                  const std::vector<std::vector<std::string>>& rows,
+                                  const std::vector<Align>& alignments = {},
+                                  Color fg = Color::DEFAULT)
+    {
+        size_t cols = header.size();
+        std::vector<size_t> colWidths(cols, 0);
+
+        // Determine max width for each column from header.
+        for (size_t i = 0; i < cols; i++)
+            colWidths[i] = DisplayLength(header[i]);
+
+        // Update max width based on rows.
+        for (const auto &row : rows)
+        {
+            for (size_t i = 0; i < row.size() && i < cols; i++)
+            {
+                size_t cellLength = DisplayLength(row[i]);
+                if (cellLength > colWidths[i])
+                    colWidths[i] = cellLength;
+            }
+        }
+
+        // Helper lambda to repeat a string.
+        auto repeat = [](const std::string &s, size_t count) {
+            std::string result;
+            for (size_t i = 0; i < count; ++i)
+                result += s;
+            return result;
+        };
+
+        std::ostringstream oss;
+
+        // Top border.
+        oss << Foreground(fg) << "┌";
+        for (size_t i = 0; i < cols; i++)
+        {
+            if (i == 0)
+                oss << title << repeat("─", colWidths[i] + 2 - DisplayLength(title));
+            else
+                oss << repeat("─", colWidths[i] + 2);
+            oss << (i < cols - 1 ? "┬" : "┐");
+        }
+        oss << Reset() << std::endl;
+        std::cout << oss.str();
+
+        // Header row.
+        oss.str("");
+        oss.clear();
+        oss << Foreground(fg) << "│" << Reset();
+        for (size_t i = 0; i < cols; i++)
+        {
+            std::string cell = header[i];
+            size_t pad = colWidths[i] - DisplayLength(cell);
+            std::string leftPad, rightPad;
+            Align alignment = (i < alignments.size()) ? alignments[i] : Align::LEFT;
+            if (alignment == Align::CENTER)
+            {
+                leftPad = std::string(pad / 2, ' ');
+                rightPad = std::string(pad - pad / 2, ' ');
+            }
+            else if (alignment == Align::RIGHT)
+            {
+                leftPad = std::string(pad, ' ');
+            }
+            else // LEFT
+            {
+                rightPad = std::string(pad, ' ');
+            }
+            oss << " " << leftPad << BoldText(cell) << rightPad << " " 
+                << Foreground(fg) << "│" << Reset();
+        }
+        oss << std::endl;
+        std::cout << oss.str();
+
+        // Header separator.
+        oss.str("");
+        oss.clear();
+        oss << Foreground(fg) << "├";
+        for (size_t i = 0; i < cols; i++)
+        {
+            oss << repeat("─", colWidths[i] + 2);
+            oss << (i < cols - 1 ? "┼" : "┤");
+        }
+        oss << Reset() << std::endl;
+        std::cout << oss.str();
+
+        // Data rows.
+        for (const auto &row : rows)
+        {
+            oss.str("");
+            oss.clear();
+            oss << Foreground(fg) << "│" << Reset();
+            for (size_t i = 0; i < cols; i++)
+            {
+                std::string cell = (i < row.size()) ? row[i] : "";
+                size_t pad = colWidths[i] - DisplayLength(cell);
+                std::string leftPad, rightPad;
+                Align alignment = (i < alignments.size()) ? alignments[i] : Align::LEFT;
+                if (alignment == Align::CENTER)
+                {
+                    leftPad = std::string(pad / 2, ' ');
+                    rightPad = std::string(pad - pad / 2, ' ');
+                }
+                else if (alignment == Align::RIGHT)
+                {
+                    leftPad = std::string(pad, ' ');
+                }
+                else // LEFT
+                {
+                    rightPad = std::string(pad, ' ');
+                }
+                oss << " " << leftPad << cell << rightPad << " " 
+                    << Foreground(fg) << "│" << Reset();
+            }
+            oss << std::endl;
+            std::cout << oss.str();
+        }
+
+        // Bottom border.
+        oss.str("");
+        oss.clear();
+        oss << Foreground(fg) << "└";
+        for (size_t i = 0; i < cols; i++)
+        {
+            oss << repeat("─", colWidths[i] + 2);
+            oss << (i < cols - 1 ? "┴" : "┘");
+        }
+        oss << Reset() << std::endl;
+        std::cout << oss.str();
+    }
+
+    // Print a banner (large centered message) with optional title.
+    static inline void PrintBanner(const std::string &message, const std::string &title = "", 
+                                   int width = 80, Color fg = Color::MAGENTA)
+    {
+        // Center the message.
+        int pad = (width - static_cast<int>(DisplayLength(message))) / 2;
+        std::string paddedMessage = std::string(pad, ' ') + message;
+        if (!title.empty())
+        {
+            std::cout << BoldText(title) << std::endl;
+            std::cout << std::string(width, '=') << std::endl;
+        }
+        std::cout << Foreground(fg) << paddedMessage << Reset() << std::endl;
+        std::cout << std::string(width, '=') << std::endl;
+    }
+
+    // Log a message with a timestamp.
+    static inline void LogMessage(const std::string &message, const LogLevel &level = LogLevel::INFO)
+    {
+        auto now = std::chrono::system_clock::now();
+        std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+        std::cout << "[" << std::put_time(std::localtime(&now_time), "%F %T") << "] ";
+        if (level == LogLevel::ERROR)
+            PrintError(message);
+        else if (level == LogLevel::WARNING)
+            PrintWarning(message);
+        else
+            PrintInfo(message);
+    }
+};
+
+#endif // STYLE_CANVAS

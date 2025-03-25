@@ -1,0 +1,18 @@
+#ifndef CANVAS
+#define CANVAS
+
+#include "style/canvas"
+
+typedef CanvasStyle Style;
+
+class Canvas : public Style
+{
+public:
+    Canvas() : Style{} {};
+    ~Canvas() = default;
+
+    virtual void Draw() const = 0;
+private:
+};
+
+#endif // CANVAS

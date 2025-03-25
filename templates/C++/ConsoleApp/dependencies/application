@@ -1,0 +1,21 @@
+#ifndef APPLICATION
+#define APPLICATION
+
+
+class Application
+{
+public:
+    Application() {};
+    ~Application() = default;
+
+    void Exit() {m_exitCall = true;}
+    bool ShouldRun() {return !m_exitCall;}
+    virtual void Init() = 0;
+    virtual void Update() = 0;
+    virtual void Run() = 0;
+
+protected:
+    bool m_exitCall {false};
+};
+
+#endif // APPLICATION

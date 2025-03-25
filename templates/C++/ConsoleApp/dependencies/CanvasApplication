@@ -1,0 +1,21 @@
+#ifndef CANVAS_APPLICATION
+#define CANVAS_APPLICATION
+
+#include "canvas"
+#include "application"
+
+class CanvasApplication : public Canvas, public Application
+{
+public:
+    CanvasApplication() : Canvas{}, Application{} {};
+    ~CanvasApplication() = default;;
+
+    virtual void Init() override = 0;
+    virtual void Update() override = 0;
+    virtual void Draw() const override = 0;
+    virtual void Run() override = 0;
+
+private:
+};
+
+#endif // CANVAS_APPLICATION
